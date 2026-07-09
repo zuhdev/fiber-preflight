@@ -6,13 +6,16 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "check": "pnpm -r check",
+    "check": "pnpm --filter @fiber-preflight/core build && pnpm -r check",
     "test": "pnpm test:fixtures",
     "test:fixtures": "tsx --test tests/fixture-regression.test.ts",
     "dev:api": "pnpm --filter @fiber-preflight/api dev",
     "dev:web": "pnpm --filter @fiber-preflight/web dev --host 127.0.0.1",
     "cli": "pnpm --filter @fiber-preflight/cli start",
-    "fixture:payable": "pnpm --filter @fiber-preflight/cli start -- check --fixture ../../fixtures/payable-route.json"
+    "fixture:payable": "pnpm --filter @fiber-preflight/cli start -- check --fixture ../../fixtures/payable-route.json",
+    "fixture:mpp": "pnpm --filter @fiber-preflight/cli start -- check --fixture ../../fixtures/mpp-needed.json",
+    "fixture:probe": "pnpm --filter @fiber-preflight/cli start -- probe --fixture ../../fixtures/mpp-needed.json",
+    "fixture:postmortem": "pnpm --filter @fiber-preflight/cli start -- explain --fixture ../../fixtures/failed-payment.json"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
