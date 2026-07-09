@@ -40,6 +40,10 @@ Probe Lab runs safe `send_payment` dry-runs across fee-rate and MPP part setting
 
 Preflight and Probe Lab reports include an operator runbook with prioritized next steps, copyable retry params, and ownership hints for wallet, node, merchant, or network follow-up.
 
+## Demo Story Mode
+
+The web dashboard includes guided fixture stories for payable routes, expired invoices, insufficient liquidity, MPP tuning, fee-budget failures, and failed-payment postmortems.
+
 ## API
 
 Run the local API server:

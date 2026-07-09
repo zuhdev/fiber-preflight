@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  BookOpen,
   CheckCircle2,
   CircleSlash,
   ClipboardList,
@@ -33,7 +34,7 @@ import {
   type RunbookStep
 } from "@fiber-preflight/core";
 import { useMemo, useState } from "react";
-import { demoScenarios } from "./demoScenarios.js";
+import { demoScenarios, storyForScenario, type DemoStory } from "./demoScenarios.js";
 
 type Mode = "check" | "explain" | "probe";
 type Source = "demo" | "live";
@@ -72,15 +73,16 @@ export function App() {
     () => demoScenarios.find((item) => item.name === scenarioName) ?? demoScenarios[0],
     [scenarioName]
   );
+  const story = useMemo(() => storyForScenario(scenario), [scenario]);
   const activeVerdict = probeReport?.verdict ?? report?.verdict;
   const activeScore = probeReport?.score ?? report?.score;
 
-  async function run() {
+  async function run(selectedMode: Mode = mode) {
     setBusy(true);
     setError(undefined);
     try {
       if (source === "live" && useApiProxy) {
-        if (mode === "probe") {
+        if (selectedMode === "probe") {
           const nextProbeReport = await postJson<RouteProbeReport>(`${apiUrl}/api/probes/route`, {
             rpcUrl,
             token: token || undefined,
@@ -94,7 +96,7 @@ export function App() {
           return;
         }
 
-        const nextReport = mode === "check"
+        const nextReport = selectedMode === "check"
           ? await postJson<PreflightReport>(`${apiUrl}/api/preflight/check`, {
               rpcUrl,
               token: token || undefined,
@@ -118,9 +120,9 @@ export function App() {
           ? new FixtureRpc(scenario)
           : new FiberRpcClient({ url: rpcUrl, token: token || undefined });
 
-      if (mode === "check" || mode === "probe") {
+      if (selectedMode === "check" || selectedMode === "probe") {
         const inputInvoice = source === "demo" ? stringFromScenario(scenario.input?.invoice) : invoice.trim();
-        if (mode === "probe") {
+        if (selectedMode === "probe") {
           const nextProbeReport = await probeRouteOptions(rpc, {
             invoice: inputInvoice,
             amount: amount.trim() || stringFromScenario(scenario.input?.amount),
@@ -152,6 +154,13 @@ export function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function runStory() {
+    if (!story) return;
+    setSource("demo");
+    setMode(story.mode);
+    await run(story.mode);
   }
 
   async function testConnection() {
@@ -225,7 +234,15 @@ export function App() {
           {source === "demo" ? (
             <label>
               Scenario
-              <select value={scenarioName} onChange={(event) => setScenarioName(event.target.value)}>
+              <select
+                value={scenarioName}
+                onChange={(event) => {
+                  setScenarioName(event.target.value);
+                  setReport(undefined);
+                  setProbeReport(undefined);
+                  setError(undefined);
+                }}
+              >
                 {demoScenarios.map((item) => (
                   <option key={item.name}>{item.name}</option>
                 ))}
@@ -262,6 +279,8 @@ export function App() {
               {statusReport && <StatusPanel report={statusReport} />}
             </>
           )}
+
+          {source === "demo" && story && <StoryCard story={story} onRun={runStory} busy={busy} />}
 
           {source === "live" && (mode === "check" || mode === "probe") && (
             <>
@@ -315,7 +334,7 @@ export function App() {
             </label>
           )}
 
-          <button className="primary" onClick={run} disabled={busy}>
+          <button className="primary" onClick={() => run()} disabled={busy}>
             {busy ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
             {mode === "probe" ? "Run probes" : "Run preflight"}
           </button>
@@ -323,12 +342,68 @@ export function App() {
 
         <div className="report">
           {error && <div className="error">{error}</div>}
+          {source === "demo" && story && <StoryPanel story={story} />}
           {!report && !probeReport && !error && <EmptyReport />}
           {probeReport && <ProbeReportView report={probeReport} />}
           {report && <ReportView report={report} />}
         </div>
       </section>
     </main>
+  );
+}
+
+function StoryCard({ story, onRun, busy }: { story: DemoStory; onRun: () => void; busy: boolean }) {
+  return (
+    <section className="story-card">
+      <div className="story-card-head">
+        <BookOpen size={18} />
+        <div>
+          <span>{story.expectedVerdict}</span>
+          <strong>{story.title}</strong>
+        </div>
+      </div>
+      <p>{story.problem}</p>
+      <button className="secondary" onClick={onRun} disabled={busy}>
+        {busy ? <RefreshCw className="spin" size={16} /> : <Play size={16} />}
+        Run story
+      </button>
+    </section>
+  );
+}
+
+function StoryPanel({ story }: { story: DemoStory }) {
+  const chapters = [
+    { label: "Problem", detail: story.problem },
+    { label: "Diagnosis", detail: story.diagnosis },
+    { label: "Fix", detail: story.fix },
+    { label: "Payoff", detail: story.payoff }
+  ];
+
+  return (
+    <section className="story-panel">
+      <div className="section-title">
+        <BookOpen size={18} />
+        <h3>Demo Story</h3>
+      </div>
+      <div className="story-panel-head">
+        <div>
+          <span>{story.mode}</span>
+          <strong>{story.title}</strong>
+        </div>
+        <em>{story.expectedVerdict}</em>
+      </div>
+      <div className="story-steps">
+        {chapters.map((chapter, index) => (
+          <article key={chapter.label}>
+            <span>{index + 1}</span>
+            <div>
+              <strong>{chapter.label}</strong>
+              <p>{chapter.detail}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
