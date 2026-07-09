@@ -1,0 +1,21 @@
+{
+  "name": "fiber-preflight",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Payment readiness and route diagnostics for the Fiber Network.",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "dev:api": "pnpm --filter @fiber-preflight/api dev",
+    "dev:web": "pnpm --filter @fiber-preflight/web dev --host 127.0.0.1",
+    "cli": "pnpm --filter @fiber-preflight/cli start",
+    "fixture:payable": "pnpm --filter @fiber-preflight/cli start -- check --fixture ../../fixtures/payable-route.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

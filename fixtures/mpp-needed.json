@@ -1,0 +1,211 @@
+{
+  "name": "MPP needed",
+  "description": "No single channel can carry the full amount, but an MPP dry-run succeeds.",
+  "input": {
+    "invoice": "fibt1mppneeded"
+  },
+  "calls": {
+    "node_info": {
+      "result": {
+        "version": "0.8.1",
+        "commit_hash": "demo",
+        "pubkey": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "features": ["announcement", "basic_mpp"],
+        "node_name": "mpp-demo-node",
+        "addresses": [],
+        "chain_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "channel_count": "0x2",
+        "pending_channel_count": "0x0",
+        "peers_count": "0x2",
+        "udt_cfg_infos": []
+      }
+    },
+    "list_peers": {
+      "result": {
+        "peers": [
+          {
+            "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "address": "/ip4/127.0.0.1/tcp/8230"
+          },
+          {
+            "pubkey": "02cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "address": "/ip4/127.0.0.1/tcp/8231"
+          }
+        ]
+      }
+    },
+    "list_channels": {
+      "result": {
+        "channels": [
+          {
+            "channel_id": "0xaaaa",
+            "is_public": true,
+            "is_acceptor": false,
+            "is_one_way": false,
+            "channel_outpoint": "0xaaaa0001",
+            "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "funding_udt_type_script": null,
+            "state": {
+              "state_name": "ChannelReady"
+            },
+            "local_balance": "0xea60",
+            "offered_tlc_balance": "0x0",
+            "remote_balance": "0xea60",
+            "received_tlc_balance": "0x0",
+            "pending_tlcs": [],
+            "enabled": true,
+            "tlc_expiry_delta": "0x5265c00",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "failure_detail": null
+          },
+          {
+            "channel_id": "0xbbbb",
+            "is_public": true,
+            "is_acceptor": false,
+            "is_one_way": false,
+            "channel_outpoint": "0xbbbb0001",
+            "pubkey": "02cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "funding_udt_type_script": null,
+            "state": {
+              "state_name": "ChannelReady"
+            },
+            "local_balance": "0xea60",
+            "offered_tlc_balance": "0x0",
+            "remote_balance": "0xea60",
+            "received_tlc_balance": "0x0",
+            "pending_tlcs": [],
+            "enabled": true,
+            "tlc_expiry_delta": "0x5265c00",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "failure_detail": null
+          }
+        ]
+      }
+    },
+    "graph_nodes": {
+      "result": {
+        "nodes": [
+          {
+            "pubkey": "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "node_name": "merchant",
+            "features": ["announcement", "basic_mpp"],
+            "addresses": []
+          }
+        ],
+        "last_cursor": "0x"
+      }
+    },
+    "graph_channels": {
+      "result": {
+        "channels": [
+          {
+            "channel_outpoint": "0xaaaa0001",
+            "node1": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "node2": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "capacity": "0x1d4c0",
+            "udt_type_script": null,
+            "update_info_of_node1": {
+              "timestamp": "0x1",
+              "enabled": true,
+              "outbound_liquidity": "0xea60",
+              "tlc_expiry_delta": "0x5265c00",
+              "tlc_minimum_value": "0x1",
+              "fee_rate": "0x3e8"
+            },
+            "update_info_of_node2": {
+              "timestamp": "0x1",
+              "enabled": true,
+              "outbound_liquidity": "0xea60",
+              "tlc_expiry_delta": "0x5265c00",
+              "tlc_minimum_value": "0x1",
+              "fee_rate": "0x3e8"
+            }
+          }
+        ],
+        "last_cursor": "0x"
+      }
+    },
+    "parse_invoice": {
+      "result": {
+        "invoice": {
+          "currency": "Fibt",
+          "amount": "0x186a0",
+          "signature": "0xdemo",
+          "data": {
+            "timestamp": "4102444800",
+            "payment_hash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+            "attrs": [
+              {
+                "expiry_time": "0x15180"
+              },
+              {
+                "payee_public_key": "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              {
+                "feature": ["basic_mpp"]
+              }
+            ]
+          }
+        }
+      }
+    },
+    "send_payment": [
+      {
+        "error": "Failed to build route, no single path has enough capacity"
+      },
+      {
+        "error": "Failed to build route, no single path has enough capacity"
+      },
+      {
+        "result": {
+          "payment_hash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+          "status": "Created",
+          "created_at": "0x1",
+          "last_updated_at": "0x1",
+          "failed_error": null,
+          "fee": "0xc8",
+          "routers": [
+            {
+              "nodes": [
+                {
+                  "pubkey": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "amount": "0xc3b4",
+                  "channel_outpoint": "0xaaaa0001"
+                },
+                {
+                  "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "amount": "0xc350",
+                  "channel_outpoint": "0xaaaa0001"
+                },
+                {
+                  "pubkey": "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                  "amount": "0xc350",
+                  "channel_outpoint": "0xdddd0001"
+                }
+              ]
+            },
+            {
+              "nodes": [
+                {
+                  "pubkey": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "amount": "0xc3b4",
+                  "channel_outpoint": "0xbbbb0001"
+                },
+                {
+                  "pubkey": "02cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                  "amount": "0xc350",
+                  "channel_outpoint": "0xbbbb0001"
+                },
+                {
+                  "pubkey": "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                  "amount": "0xc350",
+                  "channel_outpoint": "0xeeee0001"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

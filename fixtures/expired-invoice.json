@@ -1,0 +1,97 @@
+{
+  "name": "Expired invoice",
+  "description": "The invoice parses, but its timestamp and expiry make it impossible to pay.",
+  "input": {
+    "invoice": "fibt1expired"
+  },
+  "calls": {
+    "node_info": {
+      "result": {
+        "version": "0.8.1",
+        "commit_hash": "demo",
+        "pubkey": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "features": ["announcement"],
+        "node_name": "preflight-demo-node",
+        "addresses": [],
+        "chain_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+        "channel_count": "0x1",
+        "pending_channel_count": "0x0",
+        "peers_count": "0x1",
+        "udt_cfg_infos": []
+      }
+    },
+    "list_peers": {
+      "result": {
+        "peers": [
+          {
+            "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "address": "/ip4/127.0.0.1/tcp/8230"
+          }
+        ]
+      }
+    },
+    "list_channels": {
+      "result": {
+        "channels": [
+          {
+            "channel_id": "0xaaaa",
+            "is_public": true,
+            "is_acceptor": false,
+            "is_one_way": false,
+            "channel_outpoint": "0xaaaa0001",
+            "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "funding_udt_type_script": null,
+            "state": {
+              "state_name": "ChannelReady"
+            },
+            "local_balance": "0x5f5e100",
+            "offered_tlc_balance": "0x0",
+            "remote_balance": "0x2faf080",
+            "received_tlc_balance": "0x0",
+            "pending_tlcs": [],
+            "enabled": true,
+            "tlc_expiry_delta": "0x5265c00",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "failure_detail": null
+          }
+        ]
+      }
+    },
+    "graph_nodes": {
+      "result": {
+        "nodes": [],
+        "last_cursor": "0x"
+      }
+    },
+    "graph_channels": {
+      "result": {
+        "channels": [],
+        "last_cursor": "0x"
+      }
+    },
+    "parse_invoice": {
+      "result": {
+        "invoice": {
+          "currency": "Fibt",
+          "amount": "0x186a0",
+          "signature": "0xdemo",
+          "data": {
+            "timestamp": "1700000000",
+            "payment_hash": "0x8888888888888888888888888888888888888888888888888888888888888888",
+            "attrs": [
+              {
+                "expiry_time": "0x3c"
+              },
+              {
+                "payee_public_key": "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "send_payment": {
+      "error": "InvoiceExpired"
+    }
+  }
+}

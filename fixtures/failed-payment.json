@@ -1,0 +1,72 @@
+{
+  "name": "Failed payment postmortem",
+  "description": "A payment failed after route execution because a channel was temporarily unavailable.",
+  "input": {
+    "paymentHash": "0x5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "calls": {
+    "get_payment": {
+      "result": {
+        "payment_hash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+        "status": "Failed",
+        "created_at": "0x1",
+        "last_updated_at": "0x2",
+        "failed_error": "TemporaryChannelFailure",
+        "fee": "0x0",
+        "routers": [
+          {
+            "nodes": [
+              {
+                "pubkey": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "amount": "0x18704",
+                "channel_outpoint": "0xaaaa0001"
+              },
+              {
+                "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "amount": "0x186a0",
+                "channel_outpoint": "0xbbbb0001"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "list_channels": {
+      "result": {
+        "channels": [
+          {
+            "channel_id": "0xaaaa",
+            "is_public": true,
+            "is_acceptor": false,
+            "is_one_way": false,
+            "channel_outpoint": "0xaaaa0001",
+            "pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "funding_udt_type_script": null,
+            "state": {
+              "state_name": "ChannelReady"
+            },
+            "local_balance": "0x5f5e100",
+            "offered_tlc_balance": "0x186a0",
+            "remote_balance": "0x2faf080",
+            "received_tlc_balance": "0x0",
+            "pending_tlcs": [
+              {
+                "id": "0x1",
+                "amount": "0x186a0",
+                "payment_hash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+                "expiry": "0x1",
+                "status": {
+                  "Outbound": "Committed"
+                }
+              }
+            ],
+            "enabled": true,
+            "tlc_expiry_delta": "0x5265c00",
+            "tlc_fee_proportional_millionths": "0x3e8",
+            "failure_detail": null
+          }
+        ]
+      }
+    }
+  }
+}

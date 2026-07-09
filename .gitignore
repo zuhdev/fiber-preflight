@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vite/
+.research/
+*.tsbuildinfo
+.vite-web*.log
+.api*.log
+.env
+.env.local
