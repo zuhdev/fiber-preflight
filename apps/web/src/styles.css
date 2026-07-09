@@ -432,6 +432,7 @@ textarea {
 
 .export-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
 }
@@ -1140,9 +1141,15 @@ textarea {
   }
 
   .route-head,
-  .route-path-head {
+  .route-path-head,
+  .export-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .export-row button {
+    width: 100%;
+    justify-content: center;
   }
 
   .liquidity-head {

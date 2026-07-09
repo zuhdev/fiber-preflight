@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   FiberRpcClient,
   FixtureRpc,
+  buildSupportBundle,
   channelInventoryToMarkdown,
   compactHash,
   explainPayment,
@@ -47,6 +48,7 @@ interface CliOptions {
   partOptions?: string[];
   json?: boolean;
   markdown?: boolean;
+  bundle?: boolean;
   skipDryRun?: boolean;
   includeClosed?: boolean;
   stopOnFirstSuccess?: boolean;
@@ -168,6 +170,9 @@ function parseArgs(args: string[]): CliOptions {
       case "--markdown":
         options.markdown = true;
         break;
+      case "--bundle":
+        options.bundle = true;
+        break;
       case "--skip-dry-run":
         options.skipDryRun = true;
         break;
@@ -252,7 +257,11 @@ function parseTimeoutMs(value: string): number {
   }
 }
 
-function printReport(report: PreflightReport, options: Pick<CliOptions, "json" | "markdown">): void {
+function printReport(report: PreflightReport, options: Pick<CliOptions, "json" | "markdown" | "bundle">): void {
+  if (options.bundle) {
+    console.log(JSON.stringify(buildSupportBundle(report, { source: "cli" }), null, 2));
+    return;
+  }
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
     return;
@@ -322,8 +331,12 @@ function printReport(report: PreflightReport, options: Pick<CliOptions, "json" |
 
 function printChannelInventory(
   report: ChannelInventoryReport,
-  options: Pick<CliOptions, "json" | "markdown">
+  options: Pick<CliOptions, "json" | "markdown" | "bundle">
 ): void {
+  if (options.bundle) {
+    console.log(JSON.stringify(buildSupportBundle(report, { source: "cli" }), null, 2));
+    return;
+  }
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
     return;
@@ -363,7 +376,11 @@ function printChannelInventory(
   }
 }
 
-function printNodeStatus(report: NodeStatusReport, options: Pick<CliOptions, "json" | "markdown">): void {
+function printNodeStatus(report: NodeStatusReport, options: Pick<CliOptions, "json" | "markdown" | "bundle">): void {
+  if (options.bundle) {
+    console.log(JSON.stringify(buildSupportBundle(report, { source: "cli" }), null, 2));
+    return;
+  }
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
     return;
@@ -391,7 +408,11 @@ function printNodeStatus(report: NodeStatusReport, options: Pick<CliOptions, "js
   }
 }
 
-function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "json" | "markdown">): void {
+function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "json" | "markdown" | "bundle">): void {
+  if (options.bundle) {
+    console.log(JSON.stringify(buildSupportBundle(report, { source: "cli" }), null, 2));
+    return;
+  }
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
     return;
@@ -553,5 +574,6 @@ Options:
   --include-closed         Include closed channels in channel inventory
   --stop-on-first-success  Stop probe sweep after the first passing dry-run
   --json                   Print JSON report
-  --markdown               Print Markdown report`);
+  --markdown               Print Markdown report
+  --bundle                 Print redacted support bundle JSON`);
 }

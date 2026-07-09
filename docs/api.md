@@ -114,7 +114,13 @@ pnpm cli -- channels --fixture ../../fixtures/payable-route.json --markdown
 pnpm cli -- probe --fixture ../../fixtures/mpp-needed.json --markdown
 ```
 
-The web dashboard can download the current report as JSON or Markdown.
+The CLI can also emit a redacted support bundle:
+
+```powershell
+pnpm cli -- check --fixture ../../fixtures/mpp-needed.json --bundle
+```
+
+The web dashboard can download the current report as JSON, Markdown, or a support bundle. Support bundles omit raw RPC payloads and redact invoices, tokens, signatures, secrets, and full hashes.
 
 ## Runbooks
 

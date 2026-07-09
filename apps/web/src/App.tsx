@@ -21,6 +21,7 @@ import {
   DEFAULT_RPC_TIMEOUT_MS,
   FiberRpcClient,
   FixtureRpc,
+  buildSupportBundle,
   compactHash,
   explainPayment,
   inspectNodeStatus,
@@ -537,6 +538,10 @@ function ReportView({ report }: { report: PreflightReport }) {
           <Download size={16} />
           Markdown
         </button>
+        <button onClick={() => downloadSupportBundle(report)}>
+          <FileJson size={16} />
+          Bundle
+        </button>
       </section>
 
       <section className="summary-band">
@@ -627,6 +632,10 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
         <button onClick={() => downloadProbeReport(report, "markdown")}>
           <Download size={16} />
           Markdown
+        </button>
+        <button onClick={() => downloadSupportBundle(report)}>
+          <FileJson size={16} />
+          Bundle
         </button>
       </section>
 
@@ -982,6 +991,22 @@ function downloadProbeReport(report: RouteProbeReport, format: "json" | "markdow
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = `fiber-preflight-probes-${report.verdict}-${timestamp}.${extension}`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadSupportBundle(report: ReportHistoryReport): void {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const bundle = buildSupportBundle(report, { source: "web" });
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+    type: "application/json; charset=utf-8"
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `fiber-preflight-support-bundle-${timestamp}.json`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

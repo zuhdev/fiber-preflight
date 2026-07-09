@@ -27,6 +27,7 @@ Fiber payments can fail for reasons that look similar from the outside: an expir
 - Explains failed payments with postmortem evidence.
 - Exports JSON and Markdown reports.
 - Keeps recent dashboard reports in local browser history for fast comparison.
+- Exports privacy-safe support bundles with raw RPC payloads and secrets redacted.
 - Generates operator runbooks with owner, priority, and retry params.
 - Provides offline fixtures for deterministic demos and CI.
 
@@ -95,6 +96,7 @@ pnpm cli -- probe --rpc http://127.0.0.1:8227 --invoice fibt1... --fee-rates 25,
 pnpm cli -- explain --rpc http://127.0.0.1:8227 --payment-hash 0x...
 pnpm cli -- channels --rpc http://127.0.0.1:8227
 pnpm cli -- status --rpc http://127.0.0.1:8227 --invoice fibt1...
+pnpm cli -- check --rpc http://127.0.0.1:8227 --invoice fibt1... --bundle
 ```
 
 Offline fixtures:
@@ -173,3 +175,5 @@ CI runs the same check, fixture regression, and build sequence on pushes and pul
 ## Safety Model
 
 Fiber Preflight uses read calls plus `send_payment` with `dry_run` for route simulation. The fixture demos do not require a live node, token, or funds. For live RPC mode, pass a Biscuit token with the minimum read and dry-run permissions needed by your node setup. Live RPC requests default to a 10 second timeout; adjust it with `--timeout-ms`, the API `timeoutMs` field, or the web dashboard live settings.
+
+Use the web `Bundle` export button or CLI `--bundle` flag when sharing diagnostics. Support bundles keep the verdict, evidence, route summary, liquidity lens, and runbook, while omitting raw RPC payloads and redacting invoices, tokens, signatures, secrets, and full hashes.
