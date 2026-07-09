@@ -10,7 +10,9 @@ import {
   inspectChannels,
   inspectNodeStatus,
   nodeStatusToMarkdown,
+  probeRouteOptions,
   reportToMarkdown,
+  routeProbeToMarkdown,
   runInvoicePreflight,
   type ChannelInventoryReport,
   type CheckResult,
@@ -18,10 +20,12 @@ import {
   type NodeStatusReport,
   type PreflightInput,
   type PreflightReport,
+  type RouteProbeInput,
+  type RouteProbeReport,
   type RpcLike
 } from "@fiber-preflight/core";
 
-type Command = "check" | "explain" | "channels" | "status" | "help";
+type Command = "check" | "explain" | "channels" | "status" | "probe" | "help";
 
 interface CliOptions {
   command: Command;
@@ -34,10 +38,13 @@ interface CliOptions {
   maxFeeAmount?: string;
   maxFeeRate?: string;
   maxParts?: string;
+  feeRates?: string[];
+  partOptions?: string[];
   json?: boolean;
   markdown?: boolean;
   skipDryRun?: boolean;
   includeClosed?: boolean;
+  stopOnFirstSuccess?: boolean;
 }
 
 main().catch((error) => {
@@ -80,6 +87,13 @@ async function main(): Promise<void> {
   if (options.command === "status") {
     const report = await inspectNodeStatus(rpc, { sampleInvoice: options.invoice });
     printNodeStatus(report, options);
+    return;
+  }
+
+  if (options.command === "probe") {
+    const input = probeInput(options, scenario);
+    const report = await probeRouteOptions(rpc, input);
+    printProbeReport(report, options);
   }
 }
 
@@ -87,7 +101,7 @@ function parseArgs(args: string[]): CliOptions {
   if (args[0] === "--") args.shift();
   const command = (args.shift() ?? "help") as Command;
   const options: CliOptions = {
-    command: ["check", "explain", "channels", "status"].includes(command) ? command : "help"
+    command: ["check", "explain", "channels", "status", "probe"].includes(command) ? command : "help"
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -131,6 +145,14 @@ function parseArgs(args: string[]): CliOptions {
         options.maxParts = requiredValue(arg, next);
         index += 1;
         break;
+      case "--fee-rates":
+        options.feeRates = splitCsv(requiredValue(arg, next));
+        index += 1;
+        break;
+      case "--parts":
+        options.partOptions = splitCsv(requiredValue(arg, next));
+        index += 1;
+        break;
       case "--json":
         options.json = true;
         break;
@@ -143,6 +165,9 @@ function parseArgs(args: string[]): CliOptions {
       case "--include-closed":
         options.includeClosed = true;
         break;
+      case "--stop-on-first-success":
+        options.stopOnFirstSuccess = true;
+        break;
       default:
         throw new Error(`Unknown option: ${arg}`);
     }
@@ -154,6 +179,13 @@ function parseArgs(args: string[]): CliOptions {
 function requiredValue(flag: string, value: string | undefined): string {
   if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value.`);
   return value;
+}
+
+function splitCsv(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 async function createRpc(options: CliOptions): Promise<{ rpc: RpcLike; scenario?: FixtureScenario }> {
@@ -184,6 +216,15 @@ function preflightInput(options: CliOptions, scenario?: FixtureScenario): Prefli
     maxFeeRate: options.maxFeeRate,
     maxParts: options.maxParts,
     skipDryRun: options.skipDryRun
+  };
+}
+
+function probeInput(options: CliOptions, scenario?: FixtureScenario): RouteProbeInput {
+  return {
+    ...preflightInput(options, scenario),
+    feeRates: options.feeRates,
+    partOptions: options.partOptions,
+    stopOnFirstSuccess: options.stopOnFirstSuccess
   };
 }
 
@@ -326,6 +367,57 @@ function printNodeStatus(report: NodeStatusReport, options: Pick<CliOptions, "js
   }
 }
 
+function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "json" | "markdown">): void {
+  if (options.json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  if (options.markdown) {
+    console.log(routeProbeToMarkdown(report));
+    return;
+  }
+
+  console.log("Fiber Preflight Probe Lab");
+  console.log(`${report.verdict.toUpperCase()} (${report.score}/100): ${report.summary}`);
+  console.log("");
+
+  if (report.evidence.length > 0) {
+    console.log("Evidence");
+    for (const item of report.evidence) {
+      console.log(`  ${item.label}: ${item.value}`);
+    }
+    console.log("");
+  }
+
+  if (report.best) {
+    console.log("Best setting");
+    console.log(`  Max fee rate: ${report.best.feeRate ?? "default"}`);
+    console.log(`  Max parts: ${report.best.maxParts ?? "default"}`);
+    console.log(`  Estimated fee: ${report.best.fee ?? "unknown"}`);
+    console.log(`  Hops: ${report.best.hopCount ?? "unknown"}`);
+    console.log("");
+  }
+
+  console.log("Attempts");
+  for (const attempt of report.attempts) {
+    const marker = attempt.status === "pass" ? "[pass]" : "[fail]";
+    const detail = attempt.status === "pass"
+      ? `fee ${attempt.fee ?? "unknown"}, ${attempt.hopCount ?? "unknown"} hops`
+      : attempt.error ?? "route failed";
+    console.log(`  ${marker} ${attempt.label}`);
+    console.log(`         ${detail}`);
+  }
+
+  if (report.actions.length > 0) {
+    console.log("");
+    console.log("Actions");
+    for (const action of report.actions.slice(0, 8)) {
+      console.log(`  [${action.priority}] ${action.title}`);
+      console.log(`      ${action.detail}`);
+    }
+  }
+}
+
 function printCheck(check: CheckResult): void {
   const marker = {
     pass: "[pass]",
@@ -348,6 +440,7 @@ Usage:
   fiber-preflight explain --rpc http://127.0.0.1:8227 --payment-hash 0x...
   fiber-preflight channels --rpc http://127.0.0.1:8227
   fiber-preflight status --rpc http://127.0.0.1:8227
+  fiber-preflight probe --fixture ../../fixtures/mpp-needed.json --fee-rates 25,50,100 --parts 1,2,4,12
 
 Options:
   --rpc <url>              Fiber JSON-RPC endpoint
@@ -360,8 +453,11 @@ Options:
   --max-fee-amount <amt>   Dry-run max fee amount
   --max-fee-rate <rate>    Dry-run max fee rate
   --max-parts <parts>      Dry-run MPP max parts
+  --fee-rates <csv>        Probe multiple max fee rates
+  --parts <csv>            Probe multiple MPP part limits
   --skip-dry-run           Do not call send_payment dry_run
   --include-closed         Include closed channels in channel inventory
+  --stop-on-first-success  Stop probe sweep after the first passing dry-run
   --json                   Print JSON report
   --markdown               Print Markdown report`);
 }

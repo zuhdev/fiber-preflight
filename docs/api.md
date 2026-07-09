@@ -82,6 +82,21 @@ Tests safe read-only Fiber RPC capabilities.
 }
 ```
 
+`POST /api/probes/route`
+
+Runs safe `send_payment` dry-runs across fee-rate and MPP part settings.
+
+```json
+{
+  "rpcUrl": "http://127.0.0.1:8227",
+  "token": "optional-biscuit-token",
+  "invoice": "fibt1...",
+  "amount": "100000",
+  "feeRates": ["25", "50", "100", "250"],
+  "partOptions": ["1", "2", "4", "8", "12"]
+}
+```
+
 ## Export
 
 The CLI can emit Markdown artifacts:
@@ -89,6 +104,7 @@ The CLI can emit Markdown artifacts:
 ```powershell
 pnpm cli -- check --fixture ../../fixtures/mpp-needed.json --markdown
 pnpm cli -- channels --fixture ../../fixtures/payable-route.json --markdown
+pnpm cli -- probe --fixture ../../fixtures/mpp-needed.json --markdown
 ```
 
 The web dashboard can download the current report as JSON or Markdown.

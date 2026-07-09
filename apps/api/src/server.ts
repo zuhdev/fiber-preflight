@@ -5,10 +5,12 @@ import {
   explainPayment,
   inspectChannels,
   inspectNodeStatus,
+  probeRouteOptions,
   runInvoicePreflight,
   type FixtureScenario,
   type NodeStatusInput,
-  type PreflightInput
+  type PreflightInput,
+  type RouteProbeInput
 } from "@fiber-preflight/core";
 
 interface RpcConnectionBody {
@@ -28,6 +30,8 @@ interface ChannelsBody extends RpcConnectionBody {
 }
 
 interface StatusBody extends RpcConnectionBody, NodeStatusInput {}
+
+interface ProbeBody extends RpcConnectionBody, RouteProbeInput {}
 
 const port = Number(process.env.PORT ?? 8787);
 const host = process.env.HOST ?? "127.0.0.1";
@@ -108,6 +112,22 @@ async function route(request: IncomingMessage, response: ServerResponse): Promis
   if (url.pathname === "/api/status") {
     const body = await readJson<StatusBody>(request);
     const report = await inspectNodeStatus(createRpc(body), { sampleInvoice: body.sampleInvoice });
+    sendJson(response, 200, report);
+    return;
+  }
+
+  if (url.pathname === "/api/probes/route") {
+    const body = await readJson<ProbeBody>(request);
+    const report = await probeRouteOptions(createRpc(body), {
+      invoice: body.invoice,
+      amount: body.amount,
+      maxFeeAmount: body.maxFeeAmount,
+      maxFeeRate: body.maxFeeRate,
+      maxParts: body.maxParts,
+      feeRates: body.feeRates,
+      partOptions: body.partOptions,
+      stopOnFirstSuccess: body.stopOnFirstSuccess
+    });
     sendJson(response, 200, report);
     return;
   }

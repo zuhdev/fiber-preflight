@@ -151,12 +151,18 @@
     },
     "send_payment": [
       {
+        "match": {
+          "max_parts": ["0x1", "0x2"]
+        },
         "error": "Failed to build route, no single path has enough capacity"
       },
       {
         "error": "Failed to build route, no single path has enough capacity"
       },
       {
+        "match": {
+          "max_parts": ["0x4", "0x8", "0xc"]
+        },
         "result": {
           "payment_hash": "0x4444444444444444444444444444444444444444444444444444444444444444",
           "status": "Created",

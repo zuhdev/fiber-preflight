@@ -1,4 +1,9 @@
-import type { ChannelInventoryReport, NodeStatusReport, PreflightReport } from "./types.js";
+import type {
+  ChannelInventoryReport,
+  NodeStatusReport,
+  PreflightReport,
+  RouteProbeReport
+} from "./types.js";
 
 export function reportToMarkdown(report: PreflightReport): string {
   const lines: string[] = [];
@@ -129,6 +134,56 @@ export function nodeStatusToMarkdown(report: NodeStatusReport): string {
     if (check.action) lines.push(`  - Next: ${check.action}`);
   }
   lines.push("");
+
+  return `${lines.join("\n").trim()}\n`;
+}
+
+export function routeProbeToMarkdown(report: RouteProbeReport): string {
+  const lines: string[] = [];
+  lines.push("# Fiber Preflight Probe Lab");
+  lines.push("");
+  lines.push(`**Verdict:** ${report.verdict.toUpperCase()} (${report.score}/100)`);
+  lines.push("");
+  lines.push(report.summary);
+  lines.push("");
+
+  if (report.evidence.length > 0) {
+    lines.push("## Evidence");
+    lines.push("");
+    for (const item of report.evidence) {
+      lines.push(`- **${item.label}:** ${item.value}`);
+    }
+    lines.push("");
+  }
+
+  if (report.best) {
+    lines.push("## Best Setting");
+    lines.push("");
+    lines.push(`- **Max fee rate:** ${report.best.feeRate ?? "default"}`);
+    lines.push(`- **Max parts:** ${report.best.maxParts ?? "default"}`);
+    lines.push(`- **Estimated fee:** ${report.best.fee ?? "unknown"}`);
+    lines.push(`- **Hops:** ${report.best.hopCount ?? "unknown"}`);
+    lines.push("");
+  }
+
+  lines.push("## Attempts");
+  lines.push("");
+  for (const attempt of report.attempts) {
+    const result = attempt.status === "pass"
+      ? `fee ${attempt.fee ?? "unknown"}, ${attempt.hopCount ?? "unknown"} hops`
+      : attempt.error ?? "route failed";
+    lines.push(`- **${attempt.label}:** ${attempt.status.toUpperCase()} - ${result}`);
+  }
+  lines.push("");
+
+  if (report.actions.length > 0) {
+    lines.push("## Actions");
+    lines.push("");
+    for (const action of report.actions) {
+      lines.push(`- **[${action.priority}] ${action.title}:** ${action.detail}`);
+    }
+    lines.push("");
+  }
 
   return `${lines.join("\n").trim()}\n`;
 }

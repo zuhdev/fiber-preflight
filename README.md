@@ -28,8 +28,13 @@ pnpm cli -- check --fixture ../../fixtures/expired-invoice.json
 pnpm cli -- explain --rpc http://127.0.0.1:8227 --payment-hash 0x...
 pnpm cli -- channels --rpc http://127.0.0.1:8227
 pnpm cli -- status --rpc http://127.0.0.1:8227
+pnpm cli -- probe --fixture ../../fixtures/mpp-needed.json --fee-rates 25,50,100 --parts 1,2,4,12
 pnpm cli -- check --fixture ../../fixtures/mpp-needed.json --markdown
 ```
+
+## Probe Lab
+
+Probe Lab runs safe `send_payment` dry-runs across fee-rate and MPP part settings, then recommends the lowest-cost setting that produces a candidate route.
 
 ## API
 

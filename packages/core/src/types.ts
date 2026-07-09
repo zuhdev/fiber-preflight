@@ -62,6 +62,37 @@ export interface ProbeResult {
   error?: string;
 }
 
+export interface RouteProbeInput extends PreflightInput {
+  feeRates?: Array<string | number | bigint>;
+  partOptions?: Array<string | number | bigint>;
+  stopOnFirstSuccess?: boolean;
+}
+
+export interface RouteProbeAttempt {
+  id: string;
+  label: string;
+  status: "pass" | "fail";
+  feeRate?: string;
+  maxParts?: string;
+  fee?: string;
+  hopCount?: number;
+  route?: RouteSummary;
+  error?: string;
+  params: Record<string, unknown>;
+}
+
+export interface RouteProbeReport {
+  kind: "route-probe";
+  verdict: Verdict;
+  score: number;
+  summary: string;
+  attempts: RouteProbeAttempt[];
+  best?: RouteProbeAttempt;
+  evidence: Evidence[];
+  actions: SuggestedAction[];
+  raw?: Record<string, unknown>;
+}
+
 export interface PreflightReport {
   kind: "invoice-preflight" | "payment-postmortem";
   verdict: Verdict;
