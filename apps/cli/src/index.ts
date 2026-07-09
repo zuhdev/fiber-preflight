@@ -10,6 +10,7 @@ import {
   inspectChannels,
   inspectNodeStatus,
   nodeStatusToMarkdown,
+  normalizeRpcTimeoutMs,
   probeRouteOptions,
   reportToMarkdown,
   routeProbeToMarkdown,
@@ -34,6 +35,7 @@ interface CliOptions {
   command: Command;
   rpc?: string;
   token?: string;
+  timeoutMs?: number;
   fixture?: string;
   invoice?: string;
   paymentHash?: string;
@@ -118,6 +120,10 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--token":
         options.token = requiredValue(arg, next);
+        index += 1;
+        break;
+      case "--timeout-ms":
+        options.timeoutMs = parseTimeoutMs(requiredValue(arg, next));
         index += 1;
         break;
       case "--fixture":
@@ -205,7 +211,8 @@ async function createRpc(options: CliOptions): Promise<{ rpc: RpcLike; scenario?
   return {
     rpc: new FiberRpcClient({
       url: options.rpc,
-      token: options.token
+      token: options.token,
+      timeoutMs: options.timeoutMs
     })
   };
 }
@@ -235,6 +242,14 @@ function stringFromScenario(value: unknown): string | undefined {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "bigint") return String(value);
   return undefined;
+}
+
+function parseTimeoutMs(value: string): number {
+  try {
+    return normalizeRpcTimeoutMs(value);
+  } catch {
+    throw new Error("--timeout-ms must be a non-negative millisecond value.");
+  }
 }
 
 function printReport(report: PreflightReport, options: Pick<CliOptions, "json" | "markdown">): void {
@@ -523,6 +538,7 @@ Usage:
 Options:
   --rpc <url>              Fiber JSON-RPC endpoint
   --token <token>          Biscuit bearer token
+  --timeout-ms <ms>        RPC request timeout in milliseconds
   --fixture <path>         Offline fixture scenario
   --invoice <invoice>      Fiber invoice
                             With status, this tests parse_invoice permissions

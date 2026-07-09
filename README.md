@@ -18,6 +18,7 @@ Fiber payments can fail for reasons that look similar from the outside: an expir
 ## What It Does
 
 - Runs safe pre-payment checks against Fiber JSON-RPC.
+- Hardens live RPC calls with configurable request timeouts and clear connectivity errors.
 - Parses invoice facts: amount, expiry, payee, network, and asset hints.
 - Inventories peers, ready channels, balances, graph nodes, and graph channels.
 - Uses `send_payment` dry-runs to test route availability without sending funds.
@@ -88,7 +89,7 @@ See [docs/demo.md](docs/demo.md) for a tighter judge-facing script.
 Live Fiber node:
 
 ```powershell
-pnpm cli -- check --rpc http://127.0.0.1:8227 --invoice fibt1...
+pnpm cli -- check --rpc http://127.0.0.1:8227 --timeout-ms 15000 --invoice fibt1...
 pnpm cli -- probe --rpc http://127.0.0.1:8227 --invoice fibt1... --fee-rates 25,50,100 --parts 1,2,4,12
 pnpm cli -- explain --rpc http://127.0.0.1:8227 --payment-hash 0x...
 pnpm cli -- channels --rpc http://127.0.0.1:8227
@@ -170,4 +171,4 @@ CI runs the same check, fixture regression, and build sequence on pushes and pul
 
 ## Safety Model
 
-Fiber Preflight uses read calls plus `send_payment` with `dry_run` for route simulation. The fixture demos do not require a live node, token, or funds. For live RPC mode, pass a Biscuit token with the minimum read and dry-run permissions needed by your node setup.
+Fiber Preflight uses read calls plus `send_payment` with `dry_run` for route simulation. The fixture demos do not require a live node, token, or funds. For live RPC mode, pass a Biscuit token with the minimum read and dry-run permissions needed by your node setup. Live RPC requests default to a 10 second timeout; adjust it with `--timeout-ms`, the API `timeoutMs` field, or the web dashboard live settings.

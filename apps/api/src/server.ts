@@ -1,10 +1,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import {
   FiberRpcClient,
+  FiberRpcError,
   FixtureRpc,
   explainPayment,
   inspectChannels,
   inspectNodeStatus,
+  normalizeRpcTimeoutMs,
   probeRouteOptions,
   runInvoicePreflight,
   type FixtureScenario,
@@ -16,6 +18,7 @@ import {
 interface RpcConnectionBody {
   rpcUrl?: string;
   token?: string;
+  timeoutMs?: number | string | null;
   fixture?: FixtureScenario;
 }
 
@@ -138,10 +141,28 @@ async function route(request: IncomingMessage, response: ServerResponse): Promis
 function createRpc(body: RpcConnectionBody) {
   if (body.fixture) return new FixtureRpc(body.fixture);
   if (!body.rpcUrl) throw new HttpError(400, "rpcUrl or fixture is required");
-  return new FiberRpcClient({
-    url: body.rpcUrl,
-    token: body.token
-  });
+  try {
+    return new FiberRpcClient({
+      url: body.rpcUrl,
+      token: body.token,
+      timeoutMs: timeoutFromBody(body)
+    });
+  } catch (error) {
+    if (error instanceof FiberRpcError) throw new HttpError(400, error.message);
+    throw error;
+  }
+}
+
+function timeoutFromBody(body: RpcConnectionBody): number | undefined {
+  if (body.timeoutMs === undefined || body.timeoutMs === null || body.timeoutMs === "") {
+    return undefined;
+  }
+
+  try {
+    return normalizeRpcTimeoutMs(body.timeoutMs);
+  } catch {
+    throw new HttpError(400, "timeoutMs must be a non-negative millisecond value");
+  }
 }
 
 async function readJson<T>(request: IncomingMessage): Promise<T> {

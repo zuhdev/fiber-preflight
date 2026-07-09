@@ -25,6 +25,8 @@ pnpm dev:api
 
 ## Endpoints
 
+Live RPC requests accept an optional `timeoutMs` field. The default is `10000`; use `0` to disable the client-side timeout.
+
 `GET /health`
 
 Returns service health.
@@ -37,6 +39,7 @@ Runs invoice preflight against a live Fiber node or a fixture.
 {
   "rpcUrl": "http://127.0.0.1:8227",
   "token": "optional-biscuit-token",
+  "timeoutMs": 15000,
   "invoice": "fibt1...",
   "amount": "100000",
   "maxFeeRate": "50",
@@ -52,6 +55,7 @@ Explains a payment by hash.
 {
   "rpcUrl": "http://127.0.0.1:8227",
   "token": "optional-biscuit-token",
+  "timeoutMs": 15000,
   "paymentHash": "0x..."
 }
 ```
@@ -64,6 +68,7 @@ Returns channel and liquidity inventory.
 {
   "rpcUrl": "http://127.0.0.1:8227",
   "token": "optional-biscuit-token",
+  "timeoutMs": 15000,
   "includeClosed": false
 }
 ```
@@ -78,6 +83,7 @@ Tests safe read-only Fiber RPC capabilities.
 {
   "rpcUrl": "http://127.0.0.1:8227",
   "token": "optional-biscuit-token",
+  "timeoutMs": 15000,
   "sampleInvoice": "optional-fibt1..."
 }
 ```
@@ -90,6 +96,7 @@ Runs safe `send_payment` dry-runs across fee-rate and MPP part settings.
 {
   "rpcUrl": "http://127.0.0.1:8227",
   "token": "optional-biscuit-token",
+  "timeoutMs": 15000,
   "invoice": "fibt1...",
   "amount": "100000",
   "feeRates": ["25", "50", "100", "250"],

@@ -16,6 +16,7 @@ import {
   Wrench
 } from "lucide-react";
 import {
+  DEFAULT_RPC_TIMEOUT_MS,
   FiberRpcClient,
   FixtureRpc,
   compactHash,
@@ -58,6 +59,7 @@ export function App() {
   const [apiUrl, setApiUrl] = useState("http://127.0.0.1:8787");
   const [useApiProxy, setUseApiProxy] = useState(true);
   const [token, setToken] = useState("");
+  const [timeoutMs, setTimeoutMs] = useState(String(DEFAULT_RPC_TIMEOUT_MS));
   const [invoice, setInvoice] = useState("");
   const [paymentHash, setPaymentHash] = useState("");
   const [amount, setAmount] = useState("");
@@ -89,6 +91,7 @@ export function App() {
           const nextProbeReport = await postJson<RouteProbeReport>(`${apiUrl}/api/probes/route`, {
             rpcUrl,
             token: token || undefined,
+            timeoutMs: timeoutMs.trim() || undefined,
             invoice: invoice.trim(),
             amount: amount.trim() || undefined,
             feeRates: splitCsv(feeRates),
@@ -103,6 +106,7 @@ export function App() {
           ? await postJson<PreflightReport>(`${apiUrl}/api/preflight/check`, {
               rpcUrl,
               token: token || undefined,
+              timeoutMs: timeoutMs.trim() || undefined,
               invoice: invoice.trim(),
               amount: amount.trim() || undefined,
               maxFeeRate: maxFeeRate.trim() || undefined,
@@ -111,6 +115,7 @@ export function App() {
           : await postJson<PreflightReport>(`${apiUrl}/api/preflight/explain`, {
               rpcUrl,
               token: token || undefined,
+              timeoutMs: timeoutMs.trim() || undefined,
               paymentHash: paymentHash.trim()
             });
         setReport(nextReport);
@@ -121,7 +126,11 @@ export function App() {
       const rpc =
         source === "demo"
           ? new FixtureRpc(scenario)
-          : new FiberRpcClient({ url: rpcUrl, token: token || undefined });
+          : new FiberRpcClient({
+              url: rpcUrl,
+              token: token || undefined,
+              timeoutMs: timeoutMs.trim() || undefined
+            });
 
       if (selectedMode === "check" || selectedMode === "probe") {
         const inputInvoice = source === "demo" ? stringFromScenario(scenario.input?.invoice) : invoice.trim();
@@ -176,11 +185,17 @@ export function App() {
           ? await postJson<NodeStatusReport>(`${apiUrl}/api/status`, {
               rpcUrl,
               token: token || undefined,
+              timeoutMs: timeoutMs.trim() || undefined,
               sampleInvoice
             })
-          : await inspectNodeStatus(new FiberRpcClient({ url: rpcUrl, token: token || undefined }), {
-              sampleInvoice
-            });
+          : await inspectNodeStatus(
+              new FiberRpcClient({
+                url: rpcUrl,
+                token: token || undefined,
+                timeoutMs: timeoutMs.trim() || undefined
+              }),
+              { sampleInvoice }
+            );
       setStatusReport(nextStatus);
     } catch (err) {
       setStatusReport(undefined);
@@ -256,6 +271,16 @@ export function App() {
               <label>
                 RPC URL
                 <input value={rpcUrl} onChange={(event) => setRpcUrl(event.target.value)} />
+              </label>
+              <label>
+                RPC timeout (ms)
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={timeoutMs}
+                  onChange={(event) => setTimeoutMs(event.target.value)}
+                />
               </label>
               <label className="toggle-row">
                 <input

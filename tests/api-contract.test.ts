@@ -166,6 +166,16 @@ describe("Fiber Preflight API", () => {
     assert.equal(response.status, 400);
     assert.equal(response.payload.error, "rpcUrl or fixture is required");
   });
+
+  test("POST endpoints validate live RPC timeout", async () => {
+    const response = await postJson<{ error: string }>("/api/channels", {
+      rpcUrl: "http://127.0.0.1:8227",
+      timeoutMs: "after lunch"
+    });
+
+    assert.equal(response.status, 400);
+    assert.equal(response.payload.error, "timeoutMs must be a non-negative millisecond value");
+  });
 });
 
 async function startApiServer(): Promise<ApiServerHandle> {
