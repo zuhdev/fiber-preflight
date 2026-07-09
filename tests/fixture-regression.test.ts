@@ -33,6 +33,13 @@ interface ExpectedPreflight {
     hopCount: number;
     pathLabels: string[];
   };
+  liquidity?: {
+    status: "pass" | "warn" | "fail" | "info";
+    totalLocalBalance: string;
+    largestLocalBalance: string;
+    likelyNeedsMpp?: boolean;
+    shortage?: string;
+  };
   checks: Record<string, CheckResult["status"]>;
   probeStatuses?: Record<string, "pass" | "fail" | "skip">;
   nextAction: string;
@@ -44,6 +51,12 @@ const preflightCases: ExpectedPreflight[] = [
     verdict: "payable",
     score: 100,
     route: { fee: "100", routeCount: 1, hopCount: 3, pathLabels: ["Route"] },
+    liquidity: {
+      status: "pass",
+      totalLocalBalance: "150,000,000",
+      largestLocalBalance: "100,000,000",
+      likelyNeedsMpp: false
+    },
     checks: {
       "rpc.node_info": "pass",
       "invoice.expiry": "pass",
@@ -69,6 +82,13 @@ const preflightCases: ExpectedPreflight[] = [
     fixture: "insufficient-liquidity",
     verdict: "blocked",
     score: 42,
+    liquidity: {
+      status: "fail",
+      totalLocalBalance: "10,000",
+      largestLocalBalance: "10,000",
+      shortage: "99,990,000",
+      likelyNeedsMpp: false
+    },
     checks: {
       "liquidity.asset_balance": "fail",
       "route.dry_run": "fail"
@@ -83,6 +103,12 @@ const preflightCases: ExpectedPreflight[] = [
     fixture: "fee-too-low",
     verdict: "blocked",
     score: 75,
+    liquidity: {
+      status: "pass",
+      totalLocalBalance: "100,000,000",
+      largestLocalBalance: "100,000,000",
+      likelyNeedsMpp: false
+    },
     checks: {
       "route.dry_run": "fail"
     },
@@ -97,6 +123,12 @@ const preflightCases: ExpectedPreflight[] = [
     verdict: "risky",
     score: 84,
     route: { fee: "200", routeCount: 2, hopCount: 6, pathLabels: ["Part 1", "Part 2"] },
+    liquidity: {
+      status: "warn",
+      totalLocalBalance: "120,000",
+      largestLocalBalance: "60,000",
+      likelyNeedsMpp: true
+    },
     checks: {
       "liquidity.single_channel_capacity": "warn",
       "route.dry_run": "warn",
@@ -143,6 +175,15 @@ describe("invoice preflight fixtures", () => {
           assert.equal(probes.get(id), status);
         }
       }
+
+      if (expected.liquidity) {
+        assert.ok(report.liquidity, "expected liquidity insight");
+        assert.equal(report.liquidity.status, expected.liquidity.status);
+        assert.equal(report.liquidity.totalLocalBalance, expected.liquidity.totalLocalBalance);
+        assert.equal(report.liquidity.largestLocalBalance, expected.liquidity.largestLocalBalance);
+        assert.equal(report.liquidity.likelyNeedsMpp, expected.liquidity.likelyNeedsMpp);
+        assert.equal(report.liquidity.shortage, expected.liquidity.shortage);
+      }
     });
   }
 });
@@ -153,6 +194,8 @@ test("MPP route markdown preserves split route parts", async () => {
   const markdown = reportToMarkdown(report);
 
   assert.match(markdown, /## Route/);
+  assert.match(markdown, /## Liquidity Lens/);
+  assert.match(markdown, /MPP likely required/);
   assert.match(markdown, /Part 1/);
   assert.match(markdown, /Part 2/);
   assert.match(markdown, /50,000/);
@@ -169,9 +212,13 @@ test("Probe Lab finds the best MPP setting and exports its route", async () => {
   assert.equal(report.best?.maxParts, "4");
   assert.equal(report.best?.route?.routeCount, 2);
   assert.deepEqual(report.best?.route?.paths?.map((path) => path.label), ["Part 1", "Part 2"]);
+  assert.equal(report.liquidity?.status, "warn");
+  assert.equal(report.liquidity?.likelyNeedsMpp, true);
+  assert.equal(report.liquidity?.largestLocalBalance, "60,000");
   assert.equal(report.runbook?.nextBestAction, "Use the best passing dry-run setting");
 
   const markdown = routeProbeToMarkdown(report);
+  assert.match(markdown, /## Liquidity Lens/);
   assert.match(markdown, /## Best Route/);
   assert.match(markdown, /Part 2/);
 });

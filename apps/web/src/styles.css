@@ -501,6 +501,116 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.liquidity-lens {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #d9e0dc;
+  border-left-width: 5px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.liquidity-lens.pass {
+  border-left-color: #0b684d;
+}
+
+.liquidity-lens.warn {
+  border-left-color: #c79822;
+}
+
+.liquidity-lens.fail {
+  border-left-color: #b9473d;
+}
+
+.liquidity-head {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.liquidity-head p {
+  margin-top: 4px;
+  color: #52625c;
+  line-height: 1.45;
+}
+
+.liquidity-head span,
+.liquidity-stats span {
+  color: #61706a;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.liquidity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.liquidity-stats div {
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 10px;
+  background: #f6f8f5;
+  border-radius: 6px;
+}
+
+.liquidity-stats strong {
+  overflow-wrap: anywhere;
+}
+
+.liquidity-channels {
+  display: grid;
+  gap: 8px;
+}
+
+.liquidity-channel {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(92px, 150px);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: #f6f8f5;
+  border-radius: 6px;
+}
+
+.liquidity-channel div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.liquidity-channel strong,
+.liquidity-channel span,
+.liquidity-channel code {
+  overflow-wrap: anywhere;
+}
+
+.liquidity-channel span,
+.liquidity-channel em {
+  color: #52625c;
+}
+
+.liquidity-channel em {
+  font-style: normal;
+  font-weight: 800;
+}
+
+.liquidity-channel code {
+  padding: 5px 6px;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #52625c;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
 .route-band {
   padding: 14px;
 }
@@ -920,6 +1030,7 @@ textarea {
 
   .two-col,
   .best-grid,
+  .liquidity-stats,
   .route-stats,
   .probe-list,
   .story-steps,
@@ -938,6 +1049,14 @@ textarea {
     flex-direction: column;
   }
 
+  .liquidity-head {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .liquidity-head span {
+    grid-column: 2;
+  }
+
   .route-head span {
     margin-left: 0;
   }
@@ -945,6 +1064,10 @@ textarea {
   .route-node {
     min-width: 150px;
     flex-basis: 150px;
+  }
+
+  .liquidity-channel {
+    grid-template-columns: 1fr;
   }
 
   .runbook-card {

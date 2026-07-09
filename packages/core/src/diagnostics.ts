@@ -1,4 +1,5 @@
 import { classifyFailure } from "./failure-classifier.js";
+import { buildLiquidityInsight } from "./liquidity.js";
 import {
   channelStateName,
   compactHash,
@@ -18,6 +19,7 @@ import type {
   Evidence,
   GraphChannel,
   GraphNode,
+  LiquidityInsight,
   NodeInfoResult,
   PaymentExplainInput,
   PaymentResult,
@@ -223,7 +225,15 @@ export async function runInvoicePreflight(
   }
 
   actions.push(...actionsFromChecks(checks));
-  return finalizeReport("invoice-preflight", checks, dedupeActions(actions), evidence, raw, route, probes);
+  const liquidity = buildLiquidityInsight(allChannels, {
+    amount: parsedInvoice?.amount ?? input.amount,
+    asset: parsedInvoice ? (parsedInvoice.udtScript ? "UDT" : "CKB") : "unknown",
+    route
+  });
+  if (liquidity) {
+    evidence.push({ label: "Liquidity lens", value: liquidity.summary, raw: liquidity });
+  }
+  return finalizeReport("invoice-preflight", checks, dedupeActions(actions), evidence, raw, route, probes, liquidity);
 }
 
 export async function explainPayment(
@@ -887,7 +897,8 @@ function finalizeReport(
   evidence: Evidence[],
   raw: Record<string, unknown>,
   route?: RouteSummary,
-  probes?: ProbeResult[]
+  probes?: ProbeResult[],
+  liquidity?: LiquidityInsight
 ): PreflightReport {
   const verdict = deriveVerdict(checks);
   const score = deriveScore(checks);
@@ -901,6 +912,7 @@ function finalizeReport(
     evidence,
     probes: probes && probes.length > 0 ? probes : undefined,
     route,
+    liquidity,
     raw
   };
   return {

@@ -82,6 +82,37 @@ export interface RouteSummary {
   paths?: RoutePathSummary[];
 }
 
+export interface LiquidityChannelInsight {
+  channelId: string;
+  peer: string;
+  channelOutpoint?: string;
+  asset: "CKB" | "UDT";
+  state: string;
+  enabled: boolean;
+  isPublic: boolean;
+  localBalance: string;
+  remoteBalance: string;
+  pendingTlcCount: number;
+  canCoverAmount?: boolean;
+}
+
+export interface LiquidityInsight {
+  status: "pass" | "warn" | "fail" | "info";
+  title: string;
+  summary: string;
+  asset: "CKB" | "UDT" | "unknown";
+  amount?: string;
+  matchingChannelCount: number;
+  totalLocalBalance: string;
+  largestLocalBalance: string;
+  shortage?: string;
+  canPayWithSingleChannel?: boolean;
+  likelyNeedsMpp?: boolean;
+  routeCorrelation?: string;
+  largestChannel?: LiquidityChannelInsight;
+  channels: LiquidityChannelInsight[];
+}
+
 export interface ProbeResult {
   id: string;
   label: string;
@@ -120,6 +151,7 @@ export interface RouteProbeReport {
   best?: RouteProbeAttempt;
   evidence: Evidence[];
   actions: SuggestedAction[];
+  liquidity?: LiquidityInsight;
   runbook?: RunbookPlan;
   raw?: Record<string, unknown>;
 }
@@ -134,6 +166,7 @@ export interface PreflightReport {
   evidence: Evidence[];
   probes?: ProbeResult[];
   route?: RouteSummary;
+  liquidity?: LiquidityInsight;
   runbook?: RunbookPlan;
   raw?: Record<string, unknown>;
 }

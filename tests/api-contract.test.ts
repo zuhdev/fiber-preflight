@@ -55,6 +55,9 @@ describe("Fiber Preflight API", () => {
     assert.equal(response.payload.verdict, "risky");
     assert.equal(response.payload.route?.routeCount, 2);
     assert.deepEqual(response.payload.route?.paths?.map((path) => path.label), ["Part 1", "Part 2"]);
+    assert.equal(response.payload.liquidity?.status, "warn");
+    assert.equal(response.payload.liquidity?.likelyNeedsMpp, true);
+    assert.equal(response.payload.liquidity?.largestLocalBalance, "60,000");
     assert.equal(response.payload.runbook?.nextBestAction, "Retry with MPP with up to 12 parts");
   });
 
@@ -71,6 +74,8 @@ describe("Fiber Preflight API", () => {
     assert.equal(response.payload.best?.feeRate, "25");
     assert.equal(response.payload.best?.maxParts, "4");
     assert.equal(response.payload.best?.route?.routeCount, 2);
+    assert.equal(response.payload.liquidity?.status, "warn");
+    assert.equal(response.payload.liquidity?.likelyNeedsMpp, true);
   });
 
   test("POST /api/preflight/explain explains failed payments", async () => {

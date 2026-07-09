@@ -1,5 +1,6 @@
 import type {
   ChannelInventoryReport,
+  LiquidityInsight,
   NodeStatusReport,
   PreflightReport,
   RouteProbeReport,
@@ -22,6 +23,13 @@ export function reportToMarkdown(report: PreflightReport): string {
     for (const item of report.evidence) {
       lines.push(`- **${item.label}:** ${item.value}`);
     }
+    lines.push("");
+  }
+
+  if (report.liquidity) {
+    lines.push("## Liquidity Lens");
+    lines.push("");
+    appendLiquidityLines(lines, report.liquidity);
     lines.push("");
   }
 
@@ -169,6 +177,13 @@ export function routeProbeToMarkdown(report: RouteProbeReport): string {
     lines.push("");
   }
 
+  if (report.liquidity) {
+    lines.push("## Liquidity Lens");
+    lines.push("");
+    appendLiquidityLines(lines, report.liquidity);
+    lines.push("");
+  }
+
   if (report.best?.route) {
     lines.push("## Best Route");
     lines.push("");
@@ -201,6 +216,25 @@ export function routeProbeToMarkdown(report: RouteProbeReport): string {
   }
 
   return `${lines.join("\n").trim()}\n`;
+}
+
+function appendLiquidityLines(lines: string[], insight: LiquidityInsight): void {
+  lines.push(`- **Status:** ${insight.status.toUpperCase()} - ${insight.title}`);
+  lines.push(`- **Summary:** ${insight.summary}`);
+  lines.push(`- **Asset:** ${insight.asset}`);
+  if (insight.amount) lines.push(`- **Amount:** ${insight.amount}`);
+  lines.push(`- **Matching channels:** ${insight.matchingChannelCount}`);
+  lines.push(`- **Total local balance:** ${insight.totalLocalBalance}`);
+  lines.push(`- **Largest local balance:** ${insight.largestLocalBalance}`);
+  if (insight.shortage) lines.push(`- **Shortage:** ${insight.shortage}`);
+  if (insight.likelyNeedsMpp) lines.push("- **MPP:** likely required");
+  if (insight.largestChannel) {
+    const channel = insight.largestChannel;
+    const outpoint = channel.channelOutpoint ? `, outpoint ${channel.channelOutpoint}` : "";
+    lines.push(
+      `- **Largest channel:** ${channel.channelId} peer ${channel.peer}, local ${channel.localBalance}${outpoint}`
+    );
+  }
 }
 
 function appendRoutePathLines(lines: string[], route: RouteSummary): void {

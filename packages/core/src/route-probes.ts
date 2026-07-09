@@ -1,7 +1,9 @@
 import { classifyFailure } from "./failure-classifier.js";
 import { compactHash, formatAmount, outpointToString, quantityToBigInt, toHexQuantity } from "./format.js";
+import { buildLiquidityInsight, invoiceLiquidityAsset } from "./liquidity.js";
 import { buildRouteProbeRunbook } from "./runbook.js";
 import type {
+  Channel,
   CkbInvoice,
   Evidence,
   NodeInfoResult,
@@ -69,8 +71,8 @@ export async function probeRouteOptions(
     [input.invoice]
   ]);
   raw.parse_invoice = parsed.value ?? parsed.error?.message;
-  if (parsed.ok && parsed.value?.invoice) {
-    const invoice = parsed.value.invoice;
+  const invoice = parsed.value?.invoice;
+  if (parsed.ok && invoice) {
     if (invoice.amount !== undefined && invoice.amount !== null) {
       evidence.push({ label: "Invoice amount", value: formatAmount(invoice.amount) });
     }
@@ -84,6 +86,9 @@ export async function probeRouteOptions(
       priority: "high"
     });
   }
+
+  const channels = await safeCallVariants<{ channels?: Channel[] }>(rpc, "list_channels", [[{}], []]);
+  raw.list_channels = channels.value ?? channels.error?.message;
 
   const feeRates = normalizeOptions(input.feeRates, input.maxFeeRate, [25, 50, 100, 250]);
   const partOptions = normalizeOptions(input.partOptions, input.maxParts, [1, 2, 4, 8, 12]);
@@ -146,6 +151,14 @@ export async function probeRouteOptions(
       priority: "high"
     });
   }
+  const liquidity = buildLiquidityInsight(channels.value?.channels ?? [], {
+    amount: invoice?.amount ?? input.amount,
+    asset: invoiceLiquidityAsset(invoice),
+    route: best?.route
+  });
+  if (liquidity) {
+    evidence.push({ label: "Liquidity lens", value: liquidity.summary, raw: liquidity });
+  }
 
   const report: RouteProbeReport = {
     kind: "route-probe",
@@ -156,6 +169,7 @@ export async function probeRouteOptions(
     best,
     evidence,
     actions: dedupeActions(actions),
+    liquidity,
     raw
   };
   return {

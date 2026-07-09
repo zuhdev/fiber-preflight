@@ -27,6 +27,7 @@ import {
   runInvoicePreflight,
   type CheckResult,
   type FixtureScenario,
+  type LiquidityInsight,
   type NodeStatusReport,
   type PreflightReport,
   type RoutePathSummary,
@@ -442,6 +443,8 @@ function ReportView({ report }: { report: PreflightReport }) {
         </section>
       )}
 
+      {report.liquidity && <LiquidityLens insight={report.liquidity} />}
+
       {report.route && <RouteMap route={report.route} title="Route graph" />}
 
       {report.probes && report.probes.length > 0 && (
@@ -555,6 +558,8 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
         </section>
       )}
 
+      {report.liquidity && <LiquidityLens insight={report.liquidity} />}
+
       {report.best?.route && <RouteMap route={report.best.route} title="Best route graph" />}
 
       <section>
@@ -597,6 +602,61 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
 
       {report.runbook && <RunbookPanel plan={report.runbook} />}
     </>
+  );
+}
+
+function LiquidityLens({ insight }: { insight: LiquidityInsight }) {
+  return (
+    <section className={`liquidity-lens ${insight.status}`}>
+      <div className="liquidity-head">
+        <Activity size={18} />
+        <div>
+          <strong>{insight.title}</strong>
+          <p>{insight.summary}</p>
+        </div>
+        <span>{insight.status}</span>
+      </div>
+      <div className="liquidity-stats">
+        <div>
+          <span>Asset</span>
+          <strong>{insight.asset}</strong>
+        </div>
+        <div>
+          <span>Amount</span>
+          <strong>{insight.amount ?? "unknown"}</strong>
+        </div>
+        <div>
+          <span>Channels</span>
+          <strong>{insight.matchingChannelCount}</strong>
+        </div>
+        <div>
+          <span>Total local</span>
+          <strong>{insight.totalLocalBalance}</strong>
+        </div>
+        <div>
+          <span>Largest local</span>
+          <strong>{insight.largestLocalBalance}</strong>
+        </div>
+        <div>
+          <span>MPP</span>
+          <strong>{insight.likelyNeedsMpp ? "Likely" : "Not required"}</strong>
+        </div>
+      </div>
+      {insight.channels.length > 0 && (
+        <div className="liquidity-channels">
+          {insight.channels.slice(0, 3).map((channel) => (
+            <div className="liquidity-channel" key={`${channel.channelId}-${channel.peer}`}>
+              <div>
+                <strong>{channel.channelId}</strong>
+                <span>{channel.peer}</span>
+              </div>
+              <em>{channel.localBalance}</em>
+              {channel.channelOutpoint && <code>{channel.channelOutpoint}</code>}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -17,6 +17,7 @@ import {
   type ChannelInventoryReport,
   type CheckResult,
   type FixtureScenario,
+  type LiquidityInsight,
   type NodeStatusReport,
   type PreflightInput,
   type PreflightReport,
@@ -258,6 +259,11 @@ function printReport(report: PreflightReport, options: Pick<CliOptions, "json" |
     console.log("");
   }
 
+  if (report.liquidity) {
+    printLiquidityInsight(report.liquidity);
+    console.log("");
+  }
+
   if (report.route) {
     console.log("Route");
     console.log(`  Fee: ${report.route.fee}`);
@@ -401,6 +407,11 @@ function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "j
     console.log("");
   }
 
+  if (report.liquidity) {
+    printLiquidityInsight(report.liquidity);
+    console.log("");
+  }
+
   if (report.best?.route) {
     console.log("Best route");
     printRoutePaths(report.best.route, "  ");
@@ -429,6 +440,24 @@ function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "j
       console.log(`  [${action.priority}] ${action.title}`);
       console.log(`      ${action.detail}`);
     }
+  }
+}
+
+function printLiquidityInsight(insight: LiquidityInsight): void {
+  console.log("Liquidity Lens");
+  console.log(`  ${insight.status.toUpperCase()}: ${insight.title}`);
+  console.log(`  ${insight.summary}`);
+  console.log(`  Asset: ${insight.asset}`);
+  if (insight.amount) console.log(`  Amount: ${insight.amount}`);
+  console.log(`  Matching channels: ${insight.matchingChannelCount}`);
+  console.log(`  Total local: ${insight.totalLocalBalance}`);
+  console.log(`  Largest local: ${insight.largestLocalBalance}`);
+  if (insight.shortage) console.log(`  Shortage: ${insight.shortage}`);
+  if (insight.likelyNeedsMpp) console.log("  MPP: likely required");
+  if (insight.largestChannel) {
+    const channel = insight.largestChannel;
+    const outpoint = channel.channelOutpoint ? ` via ${channel.channelOutpoint}` : "";
+    console.log(`  Largest channel: ${channel.channelId} peer ${channel.peer}${outpoint}`);
   }
 }
 

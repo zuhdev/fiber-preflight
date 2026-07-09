@@ -3,6 +3,7 @@ export * from "./diagnostics.js";
 export * from "./failure-classifier.js";
 export * from "./fixtures.js";
 export * from "./format.js";
+export * from "./liquidity.js";
 export * from "./report.js";
 export * from "./rpc.js";
 export * from "./route-probes.js";
