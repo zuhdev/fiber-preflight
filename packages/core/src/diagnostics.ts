@@ -834,20 +834,29 @@ function invoiceEvidence(invoice: ParsedInvoiceFacts): Evidence[] {
 
 function summarizeRoute(payment: PaymentResult): RouteSummary {
   const routes = payment.routers ?? (payment.router ? [{ nodes: payment.router }] : []);
-  const hops = routes.flatMap((route) =>
-    (route.nodes ?? []).map((node) => ({
+  const paths = routes.map((route, index) => {
+    const hops = (route.nodes ?? []).map((node) => ({
       pubkey: compactHash(node.pubkey),
       amount: node.amount === undefined ? undefined : formatAmount(node.amount),
       channelOutpoint: compactHash(outpointToString(node.channel_outpoint))
-    }))
-  );
+    }));
+    return {
+      id: `path-${index + 1}`,
+      label: routes.length > 1 ? `Part ${index + 1}` : "Route",
+      hopCount: hops.length,
+      amount: hops[hops.length - 1]?.amount,
+      hops
+    };
+  });
+  const hops = paths.flatMap((path) => path.hops);
 
   return {
     fee: formatAmount(payment.fee),
     feeRaw: typeof payment.fee === "string" ? payment.fee : undefined,
     routeCount: routes.length,
     hopCount: hops.length,
-    hops
+    hops,
+    paths: paths.length > 0 ? paths : undefined
   };
 }
 

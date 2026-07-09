@@ -22,6 +22,7 @@ import {
   type PreflightReport,
   type RouteProbeInput,
   type RouteProbeReport,
+  type RouteSummary,
   type RunbookPlan,
   type RpcLike
 } from "@fiber-preflight/core";
@@ -262,11 +263,7 @@ function printReport(report: PreflightReport, options: Pick<CliOptions, "json" |
     console.log(`  Fee: ${report.route.fee}`);
     console.log(`  Routes: ${report.route.routeCount || 1}`);
     console.log(`  Hops: ${report.route.hopCount}`);
-    for (const hop of report.route.hops.slice(0, 8)) {
-      const amount = hop.amount ? ` amount ${hop.amount}` : "";
-      const channel = hop.channelOutpoint ? ` via ${hop.channelOutpoint}` : "";
-      console.log(`  - ${compactHash(hop.pubkey)}${amount}${channel}`);
-    }
+    printRoutePaths(report.route, "  ");
     console.log("");
   }
 
@@ -404,6 +401,12 @@ function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "j
     console.log("");
   }
 
+  if (report.best?.route) {
+    console.log("Best route");
+    printRoutePaths(report.best.route, "  ");
+    console.log("");
+  }
+
   console.log("Attempts");
   for (const attempt of report.attempts) {
     const marker = attempt.status === "pass" ? "[pass]" : "[fail]";
@@ -425,6 +428,22 @@ function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "j
     for (const action of report.actions.slice(0, 8)) {
       console.log(`  [${action.priority}] ${action.title}`);
       console.log(`      ${action.detail}`);
+    }
+  }
+}
+
+function printRoutePaths(route: RouteSummary, indent: string): void {
+  const paths = route.paths && route.paths.length > 0
+    ? route.paths
+    : [{ label: "Route", hopCount: route.hopCount, amount: undefined, hops: route.hops }];
+
+  for (const path of paths) {
+    const amount = path.amount ? ` amount ${path.amount}` : "";
+    console.log(`${indent}${path.label}: ${path.hopCount} hop(s)${amount}`);
+    for (const hop of path.hops.slice(0, 8)) {
+      const hopAmount = hop.amount ? ` amount ${hop.amount}` : "";
+      const channel = hop.channelOutpoint ? ` via ${hop.channelOutpoint}` : "";
+      console.log(`${indent}  - ${compactHash(hop.pubkey)}${hopAmount}${channel}`);
     }
   }
 }

@@ -2,7 +2,8 @@ import type {
   ChannelInventoryReport,
   NodeStatusReport,
   PreflightReport,
-  RouteProbeReport
+  RouteProbeReport,
+  RouteSummary
 } from "./types.js";
 import { runbookToMarkdown } from "./runbook.js";
 
@@ -31,11 +32,7 @@ export function reportToMarkdown(report: PreflightReport): string {
     lines.push(`- **Routes:** ${report.route.routeCount || 1}`);
     lines.push(`- **Hops:** ${report.route.hopCount}`);
     lines.push("");
-    for (const [index, hop] of report.route.hops.entries()) {
-      const amount = hop.amount ? `, amount ${hop.amount}` : "";
-      const channel = hop.channelOutpoint ? `, channel ${hop.channelOutpoint}` : "";
-      lines.push(`${index + 1}. ${hop.pubkey}${amount}${channel}`);
-    }
+    appendRoutePathLines(lines, report.route);
     lines.push("");
   }
 
@@ -172,6 +169,13 @@ export function routeProbeToMarkdown(report: RouteProbeReport): string {
     lines.push("");
   }
 
+  if (report.best?.route) {
+    lines.push("## Best Route");
+    lines.push("");
+    appendRoutePathLines(lines, report.best.route);
+    lines.push("");
+  }
+
   lines.push("## Attempts");
   lines.push("");
   for (const attempt of report.attempts) {
@@ -197,4 +201,20 @@ export function routeProbeToMarkdown(report: RouteProbeReport): string {
   }
 
   return `${lines.join("\n").trim()}\n`;
+}
+
+function appendRoutePathLines(lines: string[], route: RouteSummary): void {
+  const paths = route.paths && route.paths.length > 0
+    ? route.paths
+    : [{ label: "Route", hopCount: route.hopCount, amount: undefined, hops: route.hops }];
+
+  for (const path of paths) {
+    const amount = path.amount ? `, amount ${path.amount}` : "";
+    lines.push(`- **${path.label}:** ${path.hopCount} hop(s)${amount}`);
+    for (const [index, hop] of path.hops.entries()) {
+      const hopAmount = hop.amount ? `, amount ${hop.amount}` : "";
+      const channel = hop.channelOutpoint ? `, channel ${hop.channelOutpoint}` : "";
+      lines.push(`  ${index + 1}. ${hop.pubkey}${hopAmount}${channel}`);
+    }
+  }
 }

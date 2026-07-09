@@ -29,7 +29,9 @@ import {
   type FixtureScenario,
   type NodeStatusReport,
   type PreflightReport,
+  type RoutePathSummary,
   type RouteProbeReport,
+  type RouteSummary,
   type RunbookPlan,
   type RunbookStep
 } from "@fiber-preflight/core";
@@ -440,24 +442,7 @@ function ReportView({ report }: { report: PreflightReport }) {
         </section>
       )}
 
-      {report.route && (
-        <section className="route-band">
-          <div className="route-head">
-            <Route size={18} />
-            <strong>Route</strong>
-            <span>{report.route.fee} fee</span>
-          </div>
-          <div className="hop-list">
-            {report.route.hops.map((hop, index) => (
-              <div className="hop" key={`${hop.pubkey}-${index}`}>
-                <span>{index + 1}</span>
-                <strong>{compactHash(hop.pubkey)}</strong>
-                <em>{hop.amount ?? "amount unknown"}</em>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {report.route && <RouteMap route={report.route} title="Route graph" />}
 
       {report.probes && report.probes.length > 0 && (
         <section>
@@ -570,6 +555,8 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
         </section>
       )}
 
+      {report.best?.route && <RouteMap route={report.best.route} title="Best route graph" />}
+
       <section>
         <div className="section-title">
           <Activity size={18} />
@@ -611,6 +598,71 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
       {report.runbook && <RunbookPanel plan={report.runbook} />}
     </>
   );
+}
+
+function RouteMap({ route, title }: { route: RouteSummary; title: string }) {
+  const paths = routePaths(route);
+  return (
+    <section className="route-band">
+      <div className="route-head">
+        <Route size={18} />
+        <strong>{title}</strong>
+        <span>{route.fee} fee</span>
+      </div>
+      <div className="route-stats">
+        <div>
+          <span>Paths</span>
+          <strong>{route.routeCount || paths.length}</strong>
+        </div>
+        <div>
+          <span>Hops</span>
+          <strong>{route.hopCount}</strong>
+        </div>
+        <div>
+          <span>Estimated fee</span>
+          <strong>{route.fee}</strong>
+        </div>
+      </div>
+      <div className="route-paths">
+        {paths.map((path) => (
+          <RoutePathView path={path} key={path.id} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RoutePathView({ path }: { path: RoutePathSummary }) {
+  return (
+    <div className="route-path">
+      <div className="route-path-head">
+        <strong>{path.label}</strong>
+        <span>{path.amount ?? `${path.hopCount} hop${path.hopCount === 1 ? "" : "s"}`}</span>
+      </div>
+      <div className="route-graph">
+        {path.hops.map((hop, index) => (
+          <div className="route-node" key={`${path.id}-${hop.pubkey}-${index}`}>
+            <span>{index + 1}</span>
+            <strong>{compactHash(hop.pubkey)}</strong>
+            <em>{hop.amount ?? "amount unknown"}</em>
+            {hop.channelOutpoint && <code>{hop.channelOutpoint}</code>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function routePaths(route: RouteSummary): RoutePathSummary[] {
+  if (route.paths && route.paths.length > 0) return route.paths;
+  return [
+    {
+      id: "route",
+      label: "Route",
+      hopCount: route.hopCount,
+      hops: route.hops
+    }
+  ];
 }
 
 function RunbookPanel({ plan }: { plan: RunbookPlan }) {

@@ -543,23 +543,96 @@ textarea {
   margin-left: auto;
 }
 
-.hop-list {
+.route-stats {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.hop {
-  min-height: 44px;
+.route-stats div {
+  min-height: 64px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) minmax(90px, auto);
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
+  align-content: center;
+  gap: 7px;
+  padding: 10px;
   background: #f6f8f5;
   border-radius: 6px;
 }
 
-.hop span {
+.route-stats span,
+.route-path-head span,
+.route-node em {
+  color: #61706a;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.route-stats strong {
+  overflow-wrap: anywhere;
+}
+
+.route-paths {
+  display: grid;
+  gap: 16px;
+}
+
+.route-path {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #d9e0dc;
+}
+
+.route-path:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.route-path-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.route-path-head strong {
+  overflow-wrap: anywhere;
+}
+
+.route-graph {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+}
+
+.route-node {
+  position: relative;
+  min-width: 158px;
+  max-width: 220px;
+  min-height: 118px;
+  flex: 1 0 158px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 10px;
+  background: #f6f8f5;
+  border-radius: 6px;
+}
+
+.route-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  right: -12px;
+  width: 12px;
+  height: 2px;
+  background: #b9d5c8;
+}
+
+.route-node span {
   width: 26px;
   height: 26px;
   display: grid;
@@ -570,15 +643,24 @@ textarea {
   font-weight: 850;
 }
 
-.hop strong,
-.hop em {
+.route-node strong,
+.route-node code {
   overflow-wrap: anywhere;
 }
 
-.hop em {
-  color: #52625c;
+.route-node em {
   font-style: normal;
-  text-align: right;
+}
+
+.route-node code {
+  display: block;
+  margin-top: 2px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #52625c;
+  font-size: 0.72rem;
+  line-height: 1.3;
 }
 
 .section-title {
@@ -838,6 +920,7 @@ textarea {
 
   .two-col,
   .best-grid,
+  .route-stats,
   .probe-list,
   .story-steps,
   .evidence-grid {
@@ -849,13 +932,19 @@ textarea {
     flex-direction: column;
   }
 
-  .hop {
-    grid-template-columns: 34px minmax(0, 1fr);
+  .route-head,
+  .route-path-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .hop em {
-    grid-column: 2;
-    text-align: left;
+  .route-head span {
+    margin-left: 0;
+  }
+
+  .route-node {
+    min-width: 150px;
+    flex-basis: 150px;
   }
 
   .runbook-card {

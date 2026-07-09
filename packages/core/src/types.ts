@@ -65,12 +65,21 @@ export interface RouteHopSummary {
   channelOutpoint?: string;
 }
 
+export interface RoutePathSummary {
+  id: string;
+  label: string;
+  hopCount: number;
+  amount?: string;
+  hops: RouteHopSummary[];
+}
+
 export interface RouteSummary {
   fee: string;
   feeRaw?: string;
   routeCount: number;
   hopCount: number;
   hops: RouteHopSummary[];
+  paths?: RoutePathSummary[];
 }
 
 export interface ProbeResult {
