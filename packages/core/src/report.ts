@@ -95,6 +95,7 @@ export function channelInventoryToMarkdown(report: ChannelInventoryReport): stri
   lines.push(`- **CKB local balance:** ${report.totals.ckbLocalBalance}`);
   lines.push(`- **UDT local balance:** ${report.totals.udtLocalBalance}`);
   lines.push(`- **Pending TLCs:** ${report.totals.pendingTlcCount}`);
+  if (report.pendingChannels) lines.push(`- **Pending channel opens:** ${report.pendingChannels.length}`);
   lines.push("");
 
   if (report.channels.length > 0) {
@@ -112,6 +113,24 @@ export function channelInventoryToMarkdown(report: ChannelInventoryReport): stri
       lines.push(
         `  - local ${channel.localBalance}, remote ${channel.remoteBalance}, pending TLCs ${channel.pendingTlcCount}`
       );
+      if (channel.failureDetail) lines.push(`  - failure: ${channel.failureDetail}`);
+    }
+    lines.push("");
+  }
+
+  if (report.pendingChannels && report.pendingChannels.length > 0) {
+    lines.push("## Pending Channel Opens");
+    lines.push("");
+    for (const channel of report.pendingChannels) {
+      const flags = [
+        channel.enabled ? "enabled" : "disabled",
+        channel.isPublic ? "public" : "private",
+        channel.isOneWay ? "one-way" : "two-way",
+        channel.asset
+      ].join(", ");
+      lines.push(`- **${channel.channelId}** peer ${channel.peer}`);
+      lines.push(`  - ${channel.state}; ${flags}`);
+      lines.push(`  - local ${channel.localBalance}, remote ${channel.remoteBalance}`);
       if (channel.failureDetail) lines.push(`  - failure: ${channel.failureDetail}`);
     }
     lines.push("");

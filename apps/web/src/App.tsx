@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   Trash2,
+  Upload,
   Wrench
 } from "lucide-react";
 import {
@@ -24,11 +25,15 @@ import {
   buildSupportBundle,
   compactHash,
   explainPayment,
+  inspectChannels,
   inspectNodeStatus,
+  parseSupportBundleJson,
   probeRouteOptions,
   reportToMarkdown,
   routeProbeToMarkdown,
   runInvoicePreflight,
+  supportBundleReport,
+  type ChannelInventoryReport,
   type CheckResult,
   type FixtureScenario,
   type LiquidityInsight,
@@ -38,7 +43,8 @@ import {
   type RouteProbeReport,
   type RouteSummary,
   type RunbookPlan,
-  type RunbookStep
+  type RunbookStep,
+  type SupportBundle
 } from "@fiber-preflight/core";
 import { useMemo, useState } from "react";
 import { demoScenarios, storyForScenario, type DemoStory } from "./demoScenarios.js";
@@ -54,6 +60,22 @@ import {
 
 type Mode = "check" | "explain" | "probe";
 type Source = "demo" | "live";
+
+interface LiveTestRun {
+  generatedAt: string;
+  rpcUrl: string;
+  steps: LiveTestStep[];
+  status?: NodeStatusReport;
+  channels?: ChannelInventoryReport;
+  preflight?: PreflightReport;
+  probe?: RouteProbeReport;
+}
+
+interface LiveTestStep {
+  label: string;
+  status: CheckResult["status"];
+  detail: string;
+}
 
 const statusIcon = {
   pass: CheckCircle2,
@@ -82,9 +104,14 @@ export function App() {
   const [report, setReport] = useState<PreflightReport | undefined>();
   const [probeReport, setProbeReport] = useState<RouteProbeReport | undefined>();
   const [statusReport, setStatusReport] = useState<NodeStatusReport | undefined>();
+  const [channelReport, setChannelReport] = useState<ChannelInventoryReport | undefined>();
+  const [liveTest, setLiveTest] = useState<LiveTestRun | undefined>();
   const [history, setHistory] = useState<ReportHistoryItem[]>(() => loadReportHistory());
+  const [bundleText, setBundleText] = useState("");
+  const [importedBundle, setImportedBundle] = useState<SupportBundle | undefined>();
   const [busy, setBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [liveTestBusy, setLiveTestBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const scenario = useMemo(
@@ -92,12 +119,15 @@ export function App() {
     [scenarioName]
   );
   const story = useMemo(() => storyForScenario(scenario), [scenario]);
-  const activeVerdict = probeReport?.verdict ?? report?.verdict;
-  const activeScore = probeReport?.score ?? report?.score;
+  const activeVerdict = probeReport?.verdict ?? report?.verdict ?? importedBundle?.verdict;
+  const activeScore = probeReport?.score ?? report?.score ?? importedBundle?.score;
+  const activeVerdictClass = isPaymentVerdict(activeVerdict) ? activeVerdict : "unknown";
 
   async function run(selectedMode: Mode = mode) {
     setBusy(true);
     setError(undefined);
+    setImportedBundle(undefined);
+    setLiveTest(undefined);
     try {
       if (source === "live" && useApiProxy) {
         if (selectedMode === "probe") {
@@ -211,6 +241,7 @@ export function App() {
 
   function loadHistoryItem(item: ReportHistoryItem): void {
     setError(undefined);
+    setImportedBundle(undefined);
     setMode(item.mode);
     setSource(item.source);
     if (item.report.kind === "route-probe") {
@@ -227,27 +258,72 @@ export function App() {
     setHistory([]);
   }
 
+  function importSupportBundleText(text = bundleText): void {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setError("Support bundle JSON is required.");
+      return;
+    }
+
+    try {
+      const bundle = parseSupportBundleJson(trimmed);
+      const importedReport = supportBundleReport(bundle);
+      if (!importedReport) throw new Error("Support bundle report is not viewable.");
+
+      setImportedBundle(bundle);
+      setError(undefined);
+
+      if (importedReportKind(importedReport) === "route-probe") {
+        setMode("probe");
+        setProbeReport(importedReport as RouteProbeReport);
+        setReport(undefined);
+        return;
+      }
+
+      if (importedReportKind(importedReport) === "invoice-preflight") {
+        setMode("check");
+        setReport(importedReport as PreflightReport);
+        setProbeReport(undefined);
+        return;
+      }
+
+      if (importedReportKind(importedReport) === "payment-postmortem") {
+        setMode("explain");
+        setReport(importedReport as PreflightReport);
+        setProbeReport(undefined);
+        return;
+      }
+
+      if (importedReportKind(importedReport) === "node-status") {
+        setStatusReport(importedReport as NodeStatusReport);
+      }
+      setReport(undefined);
+      setProbeReport(undefined);
+    } catch (err) {
+      setImportedBundle(undefined);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function importSupportBundleFile(file: File | undefined): Promise<void> {
+    if (!file) return;
+    const text = await file.text();
+    setBundleText(text);
+    importSupportBundleText(text);
+  }
+
+  function clearImportedBundle(): void {
+    setImportedBundle(undefined);
+    setBundleText("");
+    setReport(undefined);
+    setProbeReport(undefined);
+  }
+
   async function testConnection() {
     setStatusBusy(true);
     setError(undefined);
     try {
-      const sampleInvoice = invoice.trim() || undefined;
-      const nextStatus =
-        useApiProxy
-          ? await postJson<NodeStatusReport>(`${apiUrl}/api/status`, {
-              rpcUrl,
-              token: token || undefined,
-              timeoutMs: timeoutMs.trim() || undefined,
-              sampleInvoice
-            })
-          : await inspectNodeStatus(
-              new FiberRpcClient({
-                url: rpcUrl,
-                token: token || undefined,
-                timeoutMs: timeoutMs.trim() || undefined
-              }),
-              { sampleInvoice }
-            );
+      const nextStatus = await fetchLiveStatus(invoice.trim() || undefined);
       setStatusReport(nextStatus);
     } catch (err) {
       setStatusReport(undefined);
@@ -257,6 +333,149 @@ export function App() {
     }
   }
 
+  async function inspectLiveChannels(): Promise<ChannelInventoryReport> {
+    const nextChannels =
+      useApiProxy
+        ? await postJson<ChannelInventoryReport>(`${apiUrl}/api/channels`, {
+            ...liveConnectionBody(),
+            includePending: true
+          })
+        : await inspectChannels(liveRpc(), { includePending: true });
+    setChannelReport(nextChannels);
+    return nextChannels;
+  }
+
+  async function runLiveTest() {
+    setLiveTestBusy(true);
+    setError(undefined);
+    setImportedBundle(undefined);
+    try {
+      const sampleInvoice = invoice.trim() || undefined;
+      const nextStatus = await fetchLiveStatus(sampleInvoice);
+      const nextChannels = await inspectLiveChannels();
+      const steps: LiveTestStep[] = [
+        {
+          label: "Fiber RPC",
+          status: nextStatus.verdict === "blocked" ? "fail" : nextStatus.verdict === "limited" ? "warn" : "pass",
+          detail: nextStatus.summary
+        },
+        {
+          label: "Channels",
+          status:
+            nextChannels.totals.enabledReady > 0
+              ? "pass"
+              : (nextChannels.pendingChannels?.length ?? 0) > 0
+                ? "warn"
+                : "fail",
+          detail: nextChannels.summary
+        }
+      ];
+
+      let nextReport: PreflightReport | undefined;
+      let nextProbeReport: RouteProbeReport | undefined;
+
+      if (sampleInvoice) {
+        nextReport = useApiProxy
+          ? await postJson<PreflightReport>(`${apiUrl}/api/preflight/check`, {
+              ...liveConnectionBody(),
+              invoice: sampleInvoice,
+              amount: amount.trim() || undefined,
+              maxFeeRate: maxFeeRate.trim() || undefined,
+              maxParts: maxParts.trim() || undefined
+            })
+          : await runInvoicePreflight(liveRpc(), {
+              invoice: sampleInvoice,
+              amount: amount.trim() || undefined,
+              maxFeeRate: maxFeeRate.trim() || undefined,
+              maxParts: maxParts.trim() || undefined
+            });
+        setReport(nextReport);
+        rememberReport(nextReport, "check");
+        steps.push({
+          label: "Invoice",
+          status: nextReport.verdict === "payable" ? "pass" : nextReport.verdict === "risky" ? "warn" : "fail",
+          detail: nextReport.summary
+        });
+
+        nextProbeReport = useApiProxy
+          ? await postJson<RouteProbeReport>(`${apiUrl}/api/probes/route`, {
+              ...liveConnectionBody(),
+              invoice: sampleInvoice,
+              amount: amount.trim() || undefined,
+              feeRates: splitCsv(feeRates),
+              partOptions: splitCsv(partOptions)
+            })
+          : await probeRouteOptions(liveRpc(), {
+              invoice: sampleInvoice,
+              amount: amount.trim() || undefined,
+              feeRates: splitCsv(feeRates),
+              partOptions: splitCsv(partOptions)
+            });
+        setProbeReport(nextProbeReport);
+        rememberReport(nextProbeReport, "probe");
+        steps.push({
+          label: "Route probe",
+          status:
+            nextProbeReport.verdict === "payable"
+              ? "pass"
+              : nextProbeReport.verdict === "risky"
+                ? "warn"
+                : "fail",
+          detail: nextProbeReport.summary
+        });
+      } else {
+        setReport(undefined);
+        setProbeReport(undefined);
+        steps.push({
+          label: "Invoice",
+          status: "skip",
+          detail: "No invoice entered."
+        });
+      }
+
+      setStatusReport(nextStatus);
+      setLiveTest({
+        generatedAt: new Date().toISOString(),
+        rpcUrl,
+        steps,
+        status: nextStatus,
+        channels: nextChannels,
+        preflight: nextReport,
+        probe: nextProbeReport
+      });
+    } catch (err) {
+      setLiveTest(undefined);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLiveTestBusy(false);
+    }
+  }
+
+  async function fetchLiveStatus(sampleInvoice?: string): Promise<NodeStatusReport> {
+    return useApiProxy
+      ? postJson<NodeStatusReport>(`${apiUrl}/api/status`, {
+          ...liveConnectionBody(),
+          sampleInvoice
+        })
+      : inspectNodeStatus(liveRpc(), { sampleInvoice });
+  }
+
+  function liveConnectionBody(): Record<string, unknown> {
+    return {
+      rpcUrl,
+      token: token || undefined,
+      timeoutMs: timeoutMs.trim() || undefined
+    };
+  }
+
+  function liveRpc(): FiberRpcClient {
+    return new FiberRpcClient({
+      url: rpcUrl,
+      token: token || undefined,
+      timeoutMs: timeoutMs.trim() || undefined
+    });
+  }
+
   return (
     <main className="shell">
       <section className="topbar">
@@ -264,7 +483,7 @@ export function App() {
           <p className="eyebrow">Fiber Preflight</p>
           <h1>Payment readiness and route diagnostics</h1>
         </div>
-        <div className={`verdict ${activeVerdict ?? "unknown"}`}>
+        <div className={`verdict ${activeVerdictClass}`}>
           <span>{activeVerdict ?? "idle"}</span>
           <strong>{activeScore !== undefined ? `${activeScore}/100` : "--"}</strong>
         </div>
@@ -356,7 +575,25 @@ export function App() {
                 {statusBusy ? <RefreshCw className="spin" size={16} /> : <Activity size={16} />}
                 Test connection
               </button>
+              <div className="live-actions">
+                <button className="primary" onClick={runLiveTest} disabled={liveTestBusy}>
+                  {liveTestBusy ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
+                  Run live test
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() => void inspectLiveChannels().catch((err) => {
+                    setChannelReport(undefined);
+                    setError(err instanceof Error ? err.message : String(err));
+                  })}
+                  disabled={liveTestBusy}
+                >
+                  <Route size={16} />
+                  Channels
+                </button>
+              </div>
               {statusReport && <StatusPanel report={statusReport} />}
+              {channelReport && <ChannelInventoryPanel report={channelReport} />}
             </>
           )}
 
@@ -419,6 +656,15 @@ export function App() {
             {mode === "probe" ? "Run probes" : "Run preflight"}
           </button>
 
+          <SupportBundleImportPanel
+            value={bundleText}
+            hasBundle={Boolean(importedBundle)}
+            onChange={setBundleText}
+            onImport={() => importSupportBundleText()}
+            onFile={(file) => void importSupportBundleFile(file)}
+            onClear={clearImportedBundle}
+          />
+
           {history.length > 0 && (
             <ReportHistoryPanel items={history} onLoad={loadHistoryItem} onClear={clearHistory} />
           )}
@@ -426,13 +672,225 @@ export function App() {
 
         <div className="report">
           {error && <div className="error">{error}</div>}
-          {source === "demo" && story && <StoryPanel story={story} />}
-          {!report && !probeReport && !error && <EmptyReport />}
+          {importedBundle && <ImportedBundlePanel bundle={importedBundle} />}
+          {liveTest && <LiveTestPanel run={liveTest} />}
+          {source === "demo" && story && !importedBundle && !liveTest && <StoryPanel story={story} />}
+          {!report && !probeReport && !error && !importedBundle && !liveTest && <EmptyReport />}
+          {!report && !probeReport && importedBundle && <ImportedBundleReport bundle={importedBundle} />}
           {probeReport && <ProbeReportView report={probeReport} />}
           {report && <ReportView report={report} />}
         </div>
       </section>
     </main>
+  );
+}
+
+function SupportBundleImportPanel({
+  value,
+  hasBundle,
+  onChange,
+  onImport,
+  onFile,
+  onClear
+}: {
+  value: string;
+  hasBundle: boolean;
+  onChange: (value: string) => void;
+  onImport: () => void;
+  onFile: (file: File | undefined) => void;
+  onClear: () => void;
+}) {
+  return (
+    <section className="bundle-import">
+      <div className="section-title">
+        <Upload size={18} />
+        <h3>Import Bundle</h3>
+      </div>
+      <label>
+        Bundle JSON
+        <textarea
+          className="bundle-textarea"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+      <label>
+        Bundle file
+        <input
+          type="file"
+          accept="application/json,.json"
+          onChange={(event) => {
+            onFile(event.currentTarget.files?.[0]);
+            event.currentTarget.value = "";
+          }}
+        />
+      </label>
+      <div className="bundle-actions">
+        <button className="secondary" onClick={onImport}>
+          <FileJson size={16} />
+          Load bundle
+        </button>
+        {hasBundle && (
+          <button className="secondary" onClick={onClear}>
+            <Trash2 size={16} />
+            Clear bundle
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ImportedBundlePanel({ bundle }: { bundle: SupportBundle }) {
+  return (
+    <section className="bundle-panel">
+      <div className="bundle-head">
+        <FileJson size={18} />
+        <div>
+          <strong>Support Bundle</strong>
+          <p>{bundle.summary ?? bundle.reportKind}</p>
+        </div>
+        <span>{bundle.source}</span>
+      </div>
+      <div className="bundle-stats">
+        <div>
+          <span>Report</span>
+          <strong>{bundle.reportKind}</strong>
+        </div>
+        <div>
+          <span>Generated</span>
+          <strong>{formatBundleDate(bundle.generatedAt)}</strong>
+        </div>
+        <div>
+          <span>Raw RPC</span>
+          <strong>{bundle.privacy.rawRpcPayloadsIncluded ? "Included" : "Omitted"}</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ImportedBundleReport({ bundle }: { bundle: SupportBundle }) {
+  const importedReport = supportBundleReport(bundle);
+  if (isNodeStatusReport(importedReport)) {
+    return (
+      <section>
+        <div className="section-title">
+          <Activity size={18} />
+          <h3>Node Status</h3>
+        </div>
+        <StatusPanel report={importedReport} />
+      </section>
+    );
+  }
+
+  if (isChannelInventoryReport(importedReport)) {
+    return <ChannelInventoryPanel report={importedReport} />;
+  }
+
+  return (
+    <section className="bundle-json-panel">
+      <div className="section-title">
+        <FileJson size={18} />
+        <h3>Bundle Report</h3>
+      </div>
+      <pre>{JSON.stringify(bundle.report, null, 2)}</pre>
+    </section>
+  );
+}
+
+function ChannelInventoryPanel({ report }: { report: ChannelInventoryReport }) {
+  const pendingChannels = report.pendingChannels ?? [];
+  return (
+    <section className="route-band">
+      <div className="route-head">
+        <Activity size={18} />
+        <strong>Channel Inventory</strong>
+        <span>{report.totals.ready}/{report.totals.total} ready</span>
+      </div>
+      <div className="route-stats">
+        <div>
+          <span>Enabled ready</span>
+          <strong>{report.totals.enabledReady}</strong>
+        </div>
+        <div>
+          <span>CKB local</span>
+          <strong>{report.totals.ckbLocalBalance}</strong>
+        </div>
+        <div>
+          <span>Pending TLCs</span>
+          <strong>{report.totals.pendingTlcCount}</strong>
+        </div>
+        {report.pendingChannels && (
+          <div>
+            <span>Pending opens</span>
+            <strong>{pendingChannels.length}</strong>
+          </div>
+        )}
+      </div>
+      <p className="bundle-summary">{report.summary}</p>
+      {pendingChannels.length > 0 && (
+        <div className="pending-channel-list">
+          {pendingChannels.map((channel) => (
+            <div className="pending-channel" key={`${channel.channelId}-${channel.peer}`}>
+              <div>
+                <strong>{channel.channelId}</strong>
+                <span>{channel.peer}</span>
+              </div>
+              <em>{channel.state}</em>
+              <small>{channel.localBalance} local</small>
+              {channel.failureDetail && <p>{channel.failureDetail}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LiveTestPanel({ run }: { run: LiveTestRun }) {
+  return (
+    <section className="live-test-panel">
+      <div className="section-title">
+        <Activity size={18} />
+        <h3>Live Test Run</h3>
+      </div>
+      <div className="live-test-head">
+        <div>
+          <span>Endpoint</span>
+          <strong>{run.rpcUrl}</strong>
+        </div>
+        <div>
+          <span>Generated</span>
+          <strong>{formatBundleDate(run.generatedAt)}</strong>
+        </div>
+      </div>
+      <div className="proof-steps">
+        {run.steps.map((step) => {
+          const Icon = statusIcon[step.status];
+          return (
+            <article className={`proof-step ${step.status}`} key={step.label}>
+              <Icon size={18} />
+              <div>
+                <strong>{step.label}</strong>
+                <p>{step.detail}</p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      {run.status && (
+        <div className="evidence-strip">
+          {run.status.evidence.slice(0, 5).map((item) => (
+            <div key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      {run.channels && <ChannelInventoryPanel report={run.channels} />}
+    </section>
   );
 }
 
@@ -544,7 +1002,7 @@ function ReportView({ report }: { report: PreflightReport }) {
         </button>
       </section>
 
-      <section className="summary-band">
+      <section className={`summary-band ${report.verdict}`}>
         <div>
           <p className="eyebrow">Verdict</p>
           <h2>{report.summary}</h2>
@@ -639,7 +1097,7 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
         </button>
       </section>
 
-      <section className="summary-band">
+      <section className={`summary-band ${report.verdict}`}>
         <div>
           <p className="eyebrow">Probe Lab</p>
           <h2>{report.summary}</h2>
@@ -940,6 +1398,49 @@ function formatHistoryTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatBundleDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function isPaymentVerdict(value: unknown): value is PreflightReport["verdict"] {
+  return value === "payable" || value === "risky" || value === "blocked" || value === "unknown";
+}
+
+function importedReportKind(report: unknown): string | undefined {
+  if (!report || typeof report !== "object") return undefined;
+  if ("kind" in report && typeof report.kind === "string") return report.kind;
+  if ("channels" in report) return "channel-inventory";
+  return undefined;
+}
+
+function isNodeStatusReport(value: unknown): value is NodeStatusReport {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "kind" in value &&
+      value.kind === "node-status" &&
+      "checks" in value &&
+      Array.isArray(value.checks)
+  );
+}
+
+function isChannelInventoryReport(value: unknown): value is ChannelInventoryReport {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "totals" in value &&
+      "channels" in value &&
+      Array.isArray(value.channels)
+  );
 }
 
 function stringFromScenario(value: unknown): string | undefined {

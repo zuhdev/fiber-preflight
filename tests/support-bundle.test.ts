@@ -8,8 +8,10 @@ import { fileURLToPath } from "node:url";
 import {
   FixtureRpc,
   buildSupportBundle,
+  parseSupportBundleJson,
   redactForSupportBundle,
   runInvoicePreflight,
+  supportBundleReport,
   type FixtureScenario,
   type PreflightReport
 } from "../packages/core/src/index.js";
@@ -62,6 +64,30 @@ describe("support bundle redaction", () => {
     assert.match(text, /\[redacted: invoice\]/);
     assert.match(text, /0xaaaaaa\.\.\.aaaaaa/);
     assert.match(text, /0xbbbbbb\.\.\.bbbbbb/);
+  });
+
+  test("parses support bundle JSON and extracts the redacted report", async () => {
+    const scenario = await loadFixture("mpp-needed");
+    const report = await runInvoicePreflight(new FixtureRpc(scenario), scenario.input ?? {});
+    const bundle = buildSupportBundle(report, {
+      generatedAt: "2026-07-09T20:00:00.000Z",
+      source: "cli"
+    });
+    const parsed = parseSupportBundleJson(JSON.stringify(bundle));
+    const parsedReport = supportBundleReport(parsed) as PreflightReport | undefined;
+
+    assert.equal(parsed.reportKind, "invoice-preflight");
+    assert.equal(parsedReport?.kind, "invoice-preflight");
+    assert.equal(parsedReport?.verdict, "risky");
+    assert.equal(parsedReport?.route?.routeCount, 2);
+  });
+
+  test("rejects malformed support bundle JSON", () => {
+    assert.throws(() => parseSupportBundleJson("{nope"), /Invalid support bundle JSON/);
+    assert.throws(
+      () => parseSupportBundleJson(JSON.stringify({ kind: "fiber-preflight-support-bundle" })),
+      /Invalid Fiber Preflight support bundle/
+    );
   });
 
   test("CLI --bundle emits a support bundle", async () => {

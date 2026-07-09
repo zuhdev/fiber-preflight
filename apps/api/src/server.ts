@@ -30,6 +30,7 @@ interface ExplainBody extends RpcConnectionBody {
 
 interface ChannelsBody extends RpcConnectionBody {
   includeClosed?: boolean;
+  includePending?: boolean;
 }
 
 interface StatusBody extends RpcConnectionBody, NodeStatusInput {}
@@ -107,7 +108,10 @@ async function route(request: IncomingMessage, response: ServerResponse): Promis
 
   if (url.pathname === "/api/channels") {
     const body = await readJson<ChannelsBody>(request);
-    const report = await inspectChannels(createRpc(body), { includeClosed: body.includeClosed });
+    const report = await inspectChannels(createRpc(body), {
+      includeClosed: body.includeClosed,
+      includePending: body.includePending
+    });
     sendJson(response, 200, report);
     return;
   }

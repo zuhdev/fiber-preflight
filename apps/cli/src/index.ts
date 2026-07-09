@@ -357,6 +357,7 @@ function printChannelInventory(
   console.log(`  CKB local balance: ${report.totals.ckbLocalBalance}`);
   console.log(`  UDT local balance: ${report.totals.udtLocalBalance}`);
   console.log(`  Pending TLCs: ${report.totals.pendingTlcCount}`);
+  if (report.pendingChannels) console.log(`  Pending channel opens: ${report.pendingChannels.length}`);
 
   if (report.channels.length > 0) {
     console.log("");
@@ -371,6 +372,23 @@ function printChannelInventory(
       console.log(`  - ${channel.channelId} peer ${channel.peer}`);
       console.log(`      ${channel.state}; ${flags}`);
       console.log(`      local ${channel.localBalance}, remote ${channel.remoteBalance}, pending TLCs ${channel.pendingTlcCount}`);
+      if (channel.failureDetail) console.log(`      failure: ${channel.failureDetail}`);
+    }
+  }
+
+  if (report.pendingChannels && report.pendingChannels.length > 0) {
+    console.log("");
+    console.log("Pending channel opens");
+    for (const channel of report.pendingChannels) {
+      const flags = [
+        channel.enabled ? "enabled" : "disabled",
+        channel.isPublic ? "public" : "private",
+        channel.isOneWay ? "one-way" : "two-way",
+        channel.asset
+      ].join(", ");
+      console.log(`  - ${channel.channelId} peer ${channel.peer}`);
+      console.log(`      ${channel.state}; ${flags}`);
+      console.log(`      local ${channel.localBalance}, remote ${channel.remoteBalance}`);
       if (channel.failureDetail) console.log(`      failure: ${channel.failureDetail}`);
     }
   }

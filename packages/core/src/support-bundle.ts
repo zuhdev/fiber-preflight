@@ -77,6 +77,31 @@ export function buildSupportBundle(
   };
 }
 
+export function parseSupportBundleJson(text: string): SupportBundle {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    throw new Error("Invalid support bundle JSON.");
+  }
+
+  if (!isSupportBundle(parsed)) {
+    throw new Error("Invalid Fiber Preflight support bundle.");
+  }
+
+  return parsed;
+}
+
+export function supportBundleReport(bundle: SupportBundle): SupportBundleReport | undefined {
+  if (isPreflightReport(bundle.report)) return bundle.report;
+  if (isRouteProbeReport(bundle.report)) return bundle.report;
+  if (isNodeStatusReport(bundle.report)) return bundle.report;
+  if (bundle.reportKind === "channel-inventory" && isChannelInventoryReport(bundle.report)) {
+    return bundle.report;
+  }
+  return undefined;
+}
+
 export function redactForSupportBundle(value: unknown, key = ""): unknown {
   if (key === "raw") return RAW_OMITTED;
 
@@ -143,4 +168,75 @@ function reportKind(report: SupportBundleReport): string {
   if ("kind" in report && typeof report.kind === "string") return report.kind;
   if ("channels" in report) return "channel-inventory";
   return "unknown";
+}
+
+function isSupportBundle(value: unknown): value is SupportBundle {
+  if (!value || typeof value !== "object") return false;
+  const bundle = value as Partial<SupportBundle>;
+  return (
+    bundle.kind === "fiber-preflight-support-bundle" &&
+    bundle.version === 1 &&
+    typeof bundle.generatedAt === "string" &&
+    typeof bundle.source === "string" &&
+    typeof bundle.reportKind === "string" &&
+    typeof bundle.privacy === "object" &&
+    bundle.privacy !== null &&
+    "report" in bundle
+  );
+}
+
+function isPreflightReport(value: unknown): value is PreflightReport {
+  if (!value || typeof value !== "object") return false;
+  const report = value as Partial<PreflightReport>;
+  return (
+    (report.kind === "invoice-preflight" || report.kind === "payment-postmortem") &&
+    isVerdict(report.verdict) &&
+    typeof report.score === "number" &&
+    typeof report.summary === "string" &&
+    Array.isArray(report.checks) &&
+    Array.isArray(report.actions) &&
+    Array.isArray(report.evidence)
+  );
+}
+
+function isRouteProbeReport(value: unknown): value is RouteProbeReport {
+  if (!value || typeof value !== "object") return false;
+  const report = value as Partial<RouteProbeReport>;
+  return (
+    report.kind === "route-probe" &&
+    isVerdict(report.verdict) &&
+    typeof report.score === "number" &&
+    typeof report.summary === "string" &&
+    Array.isArray(report.attempts) &&
+    Array.isArray(report.actions) &&
+    Array.isArray(report.evidence)
+  );
+}
+
+function isNodeStatusReport(value: unknown): value is NodeStatusReport {
+  if (!value || typeof value !== "object") return false;
+  const report = value as Partial<NodeStatusReport>;
+  return (
+    report.kind === "node-status" &&
+    (report.verdict === "ready" || report.verdict === "limited" || report.verdict === "blocked") &&
+    typeof report.score === "number" &&
+    typeof report.summary === "string" &&
+    Array.isArray(report.checks) &&
+    Array.isArray(report.evidence)
+  );
+}
+
+function isChannelInventoryReport(value: unknown): value is ChannelInventoryReport {
+  if (!value || typeof value !== "object") return false;
+  const report = value as Partial<ChannelInventoryReport>;
+  return (
+    typeof report.summary === "string" &&
+    typeof report.totals === "object" &&
+    report.totals !== null &&
+    Array.isArray(report.channels)
+  );
+}
+
+function isVerdict(value: unknown): boolean {
+  return value === "payable" || value === "risky" || value === "blocked" || value === "unknown";
 }

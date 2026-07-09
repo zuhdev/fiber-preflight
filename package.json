@@ -13,6 +13,7 @@
     "test:web": "tsx --test tests/web-history.test.ts",
     "test:bundle": "tsx --test tests/support-bundle.test.ts",
     "test:api": "pnpm --filter @fiber-preflight/core build && tsx --test tests/api-contract.test.ts",
+    "live:proof": "pnpm --filter @fiber-preflight/cli live:proof",
     "dev:api": "pnpm --filter @fiber-preflight/api dev",
     "dev:web": "pnpm --filter @fiber-preflight/web dev --host 127.0.0.1",
     "cli": "pnpm --filter @fiber-preflight/cli start",

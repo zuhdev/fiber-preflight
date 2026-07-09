@@ -213,6 +213,7 @@ export interface ChannelInventoryReport {
     pendingTlcCount: number;
   };
   channels: ChannelInventoryItem[];
+  pendingChannels?: ChannelInventoryItem[];
   raw?: Record<string, unknown>;
 }
 

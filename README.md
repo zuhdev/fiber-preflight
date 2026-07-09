@@ -28,6 +28,7 @@ Fiber payments can fail for reasons that look similar from the outside: an expir
 - Exports JSON and Markdown reports.
 - Keeps recent dashboard reports in local browser history for fast comparison.
 - Exports privacy-safe support bundles with raw RPC payloads and secrets redacted.
+- Imports support bundles back into the dashboard for redacted report review.
 - Generates operator runbooks with owner, priority, and retry params.
 - Provides offline fixtures for deterministic demos and CI.
 
@@ -98,6 +99,39 @@ pnpm cli -- channels --rpc http://127.0.0.1:8227
 pnpm cli -- status --rpc http://127.0.0.1:8227 --invoice fibt1...
 pnpm cli -- check --rpc http://127.0.0.1:8227 --invoice fibt1... --bundle
 ```
+
+## Live Proof Test
+
+Use the live proof runner when you want repeatable evidence that Fiber Preflight works against a real Fiber RPC endpoint. It runs the same core engine as the CLI, API, and dashboard, then writes redacted support bundles to `artifacts/live-proof`.
+
+See [docs/testnet-proof.md](docs/testnet-proof.md) for the current Pudge testnet evidence, including faucet funding transactions, a committed private-channel funding transaction, and a payable invoice dry-run proof.
+
+Read-only node proof:
+
+```powershell
+pnpm live:proof -- --rpc http://127.0.0.1:8227 --timeout-ms 15000
+```
+
+Invoice dry-run proof:
+
+```powershell
+pnpm live:proof -- --rpc http://127.0.0.1:8227 --invoice fibt1... --probe
+```
+
+Strict payable proof, useful when you have a known-good invoice and route:
+
+```powershell
+pnpm live:proof -- --rpc http://127.0.0.1:8227 --invoice fibt1... --probe --expect-payable
+```
+
+With a Biscuit token:
+
+```powershell
+$env:FIBER_PREFLIGHT_TOKEN="your-token"
+pnpm live:proof -- --rpc http://127.0.0.1:8227 --invoice fibt1...
+```
+
+The runner fails if required live capabilities such as `node_info`, `list_channels`, graph reads, or `parse_invoice` are unavailable. A blocked payment route is still a valid diagnostic result unless `--expect-payable` is set. Generated bundles are privacy-safe by default: raw RPC payloads are omitted and invoices, tokens, secrets, signatures, and long hashes are redacted.
 
 Offline fixtures:
 
@@ -176,4 +210,4 @@ CI runs the same check, fixture regression, and build sequence on pushes and pul
 
 Fiber Preflight uses read calls plus `send_payment` with `dry_run` for route simulation. The fixture demos do not require a live node, token, or funds. For live RPC mode, pass a Biscuit token with the minimum read and dry-run permissions needed by your node setup. Live RPC requests default to a 10 second timeout; adjust it with `--timeout-ms`, the API `timeoutMs` field, or the web dashboard live settings.
 
-Use the web `Bundle` export button or CLI `--bundle` flag when sharing diagnostics. Support bundles keep the verdict, evidence, route summary, liquidity lens, and runbook, while omitting raw RPC payloads and redacting invoices, tokens, signatures, secrets, and full hashes.
+Use the web `Bundle` export button or CLI `--bundle` flag when sharing diagnostics. Support bundles keep the verdict, evidence, route summary, liquidity lens, and runbook, while omitting raw RPC payloads and redacting invoices, tokens, signatures, secrets, and full hashes. The web dashboard can import a support bundle JSON file or pasted bundle JSON to review the redacted report.

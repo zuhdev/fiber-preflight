@@ -9,6 +9,7 @@ import type { Channel, ChannelInventoryItem, ChannelInventoryReport, RpcLike } f
 
 export interface InspectChannelsOptions {
   includeClosed?: boolean;
+  includePending?: boolean;
 }
 
 export async function inspectChannels(
@@ -17,24 +18,9 @@ export async function inspectChannels(
 ): Promise<ChannelInventoryReport> {
   const result = await callListChannels(rpc, options);
   const channels = result.channels ?? [];
-  const items: ChannelInventoryItem[] = channels.map((channel) => {
-    const state = channelStateName(channel.state);
-    const asset: ChannelInventoryItem["asset"] = channel.funding_udt_type_script ? "UDT" : "CKB";
-    return {
-      channelId: compactHash(channel.channel_id ?? outpointToString(channel.channel_outpoint)),
-      peer: compactHash(channel.pubkey),
-      state,
-      enabled: channel.enabled !== false,
-      isPublic: channel.is_public === true,
-      isOneWay: channel.is_one_way === true,
-      isAcceptor: channel.is_acceptor === true,
-      asset,
-      localBalance: formatAmount(channel.local_balance),
-      remoteBalance: formatAmount(channel.remote_balance),
-      pendingTlcCount: channel.pending_tlcs?.length ?? 0,
-      failureDetail: channel.failure_detail ?? undefined
-    };
-  });
+  const items = channels.map(channelInventoryItem);
+  const pendingResult = options.includePending ? await callPendingChannels(rpc) : undefined;
+  const pendingItems = pendingResult?.result?.channels?.map(channelInventoryItem) ?? [];
 
   const ready = channels.filter((channel) => channelStateName(channel.state) === "ChannelReady");
   const enabledReady = ready.filter((channel) => channel.enabled !== false);
@@ -49,8 +35,10 @@ export async function inspectChannels(
     0
   );
 
+  const pendingSummary = pendingItems.length > 0 ? ` ${pendingItems.length} channel(s) are pending funding.` : "";
+
   return {
-    summary: `${enabledReady.length}/${channels.length} channels are ready and enabled.`,
+    summary: `${enabledReady.length}/${channels.length} channels are ready and enabled.${pendingSummary}`,
     totals: {
       total: channels.length,
       ready: ready.length,
@@ -62,9 +50,35 @@ export async function inspectChannels(
       pendingTlcCount
     },
     channels: items,
+    ...(options.includePending ? { pendingChannels: pendingItems } : {}),
     raw: {
-      list_channels: result
+      list_channels: result,
+      ...(options.includePending
+        ? {
+            pending_channels: pendingResult?.result,
+            pending_channels_error: pendingResult?.error
+          }
+        : {})
     }
+  };
+}
+
+function channelInventoryItem(channel: Channel): ChannelInventoryItem {
+  const state = channelStateName(channel.state);
+  const asset: ChannelInventoryItem["asset"] = channel.funding_udt_type_script ? "UDT" : "CKB";
+  return {
+    channelId: compactHash(channel.channel_id ?? outpointToString(channel.channel_outpoint)),
+    peer: compactHash(channel.pubkey),
+    state,
+    enabled: channel.enabled !== false,
+    isPublic: channel.is_public === true,
+    isOneWay: channel.is_one_way === true,
+    isAcceptor: channel.is_acceptor === true,
+    asset,
+    localBalance: formatAmount(channel.local_balance),
+    remoteBalance: formatAmount(channel.remote_balance),
+    pendingTlcCount: channel.pending_tlcs?.length ?? 0,
+    failureDetail: channel.failure_detail ?? undefined
   };
 }
 
@@ -78,5 +92,19 @@ async function callListChannels(
   } catch (firstError) {
     if (options.includeClosed) throw firstError;
     return rpc.call<{ channels?: Channel[] }>("list_channels", []);
+  }
+}
+
+async function callPendingChannels(
+  rpc: RpcLike
+): Promise<{ result?: { channels?: Channel[] }; error?: string }> {
+  try {
+    return {
+      result: await rpc.call<{ channels?: Channel[] }>("list_channels", [{ only_pending: true }])
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : String(error)
+    };
   }
 }

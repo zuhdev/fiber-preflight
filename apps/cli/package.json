@@ -7,6 +7,7 @@
   },
   "scripts": {
     "start": "pnpm --filter @fiber-preflight/core build && tsx src/index.ts",
+    "live:proof": "pnpm --filter @fiber-preflight/core build && tsx src/live-proof.ts",
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit"
   },

@@ -259,6 +259,43 @@ test("channel inventory summarizes payable-route liquidity", async () => {
   });
 });
 
+test("channel inventory can include pending channel opens", async () => {
+  const rpc = {
+    async call<T>(method: string, params: unknown[] = []): Promise<T> {
+      assert.equal(method, "list_channels");
+      const firstParam = params[0] as { only_pending?: boolean } | undefined;
+      if (firstParam?.only_pending) {
+        return {
+          channels: [
+            {
+              channel_id: "0xpending",
+              pubkey: "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+              state: { state_name: "NegotiatingFunding" },
+              enabled: false,
+              is_public: false,
+              is_one_way: false,
+              is_acceptor: false,
+              local_balance: "0x2540be400",
+              remote_balance: "0x0",
+              pending_tlcs: [],
+              failure_detail: null
+            }
+          ]
+        } as T;
+      }
+
+      return { channels: [] } as T;
+    }
+  };
+
+  const report = await inspectChannels(rpc, { includePending: true });
+
+  assert.equal(report.summary, "0/0 channels are ready and enabled. 1 channel(s) are pending funding.");
+  assert.equal(report.pendingChannels?.length, 1);
+  assert.equal(report.pendingChannels?.[0]?.state, "NegotiatingFunding");
+  assert.equal(report.pendingChannels?.[0]?.localBalance, "10,000,000,000");
+});
+
 test("node status fixture checks all read modules", async () => {
   const scenario = await loadFixture("payable-route");
   const report = await inspectNodeStatus(new FixtureRpc(scenario), {
