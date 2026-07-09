@@ -4,6 +4,7 @@ import type {
   PreflightReport,
   RouteProbeReport
 } from "./types.js";
+import { runbookToMarkdown } from "./runbook.js";
 
 export function reportToMarkdown(report: PreflightReport): string {
   const lines: string[] = [];
@@ -55,6 +56,11 @@ export function reportToMarkdown(report: PreflightReport): string {
       lines.push(`- **[${action.priority}] ${action.title}:** ${action.detail}`);
       if (action.command) lines.push(`  - Command: \`${action.command}\``);
     }
+    lines.push("");
+  }
+
+  if (report.runbook) {
+    lines.push(runbookToMarkdown(report.runbook).trim());
     lines.push("");
   }
 
@@ -182,6 +188,11 @@ export function routeProbeToMarkdown(report: RouteProbeReport): string {
     for (const action of report.actions) {
       lines.push(`- **[${action.priority}] ${action.title}:** ${action.detail}`);
     }
+    lines.push("");
+  }
+
+  if (report.runbook) {
+    lines.push(runbookToMarkdown(report.runbook).trim());
     lines.push("");
   }
 

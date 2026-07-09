@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   CircleSlash,
   ClipboardList,
+  Copy,
   Download,
   FileJson,
   Play,
@@ -27,7 +28,9 @@ import {
   type FixtureScenario,
   type NodeStatusReport,
   type PreflightReport,
-  type RouteProbeReport
+  type RouteProbeReport,
+  type RunbookPlan,
+  type RunbookStep
 } from "@fiber-preflight/core";
 import { useMemo, useState } from "react";
 import { demoScenarios } from "./demoScenarios.js";
@@ -418,6 +421,8 @@ function ReportView({ report }: { report: PreflightReport }) {
         </section>
       )}
 
+      {report.runbook && <RunbookPanel plan={report.runbook} />}
+
       <section>
         <div className="section-title">
           <ClipboardList size={18} />
@@ -527,7 +532,51 @@ function ProbeReportView({ report }: { report: RouteProbeReport }) {
           </div>
         </section>
       )}
+
+      {report.runbook && <RunbookPanel plan={report.runbook} />}
     </>
+  );
+}
+
+function RunbookPanel({ plan }: { plan: RunbookPlan }) {
+  return (
+    <section>
+      <div className="section-title">
+        <ClipboardList size={18} />
+        <h3>Runbook</h3>
+      </div>
+      <div className="runbook-summary">
+        <strong>{plan.nextBestAction ?? "No action required"}</strong>
+        <span>{plan.summary}</span>
+      </div>
+      <div className="runbook-list">
+        {plan.steps.map((step, index) => (
+          <RunbookStepCard step={step} index={index + 1} key={step.id} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RunbookStepCard({ step, index }: { step: RunbookStep; index: number }) {
+  const copyText = step.command ?? (step.params ? formatStepParams(step.params) : "");
+  return (
+    <article className={`runbook-card ${step.priority} ${step.status}`}>
+      <div className="runbook-index">{index}</div>
+      <div>
+        <div className="runbook-title">
+          <strong>{step.title}</strong>
+          <span>{step.owner} - {step.status}</span>
+        </div>
+        <p>{step.detail}</p>
+        {step.params && <code>{formatStepParams(step.params)}</code>}
+      </div>
+      {copyText && (
+        <button className="icon-button" onClick={() => copyTextToClipboard(copyText)} title="Copy runbook step">
+          <Copy size={16} />
+        </button>
+      )}
+    </article>
   );
 }
 
@@ -587,6 +636,16 @@ function splitCsv(value: string): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function formatStepParams(params: Record<string, string>): string {
+  return Object.entries(params)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" ");
+}
+
+function copyTextToClipboard(value: string): void {
+  void navigator.clipboard?.writeText(value);
 }
 
 function downloadReport(report: PreflightReport, format: "json" | "markdown"): void {

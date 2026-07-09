@@ -22,6 +22,7 @@ import {
   type PreflightReport,
   type RouteProbeInput,
   type RouteProbeReport,
+  type RunbookPlan,
   type RpcLike
 } from "@fiber-preflight/core";
 
@@ -280,6 +281,11 @@ function printReport(report: PreflightReport, options: Pick<CliOptions, "json" |
     console.log("");
   }
 
+  if (report.runbook) {
+    printRunbook(report.runbook);
+    console.log("");
+  }
+
   console.log("Checks");
   for (const check of report.checks) {
     printCheck(check);
@@ -408,6 +414,11 @@ function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "j
     console.log(`         ${detail}`);
   }
 
+  if (report.runbook) {
+    console.log("");
+    printRunbook(report.runbook);
+  }
+
   if (report.actions.length > 0) {
     console.log("");
     console.log("Actions");
@@ -416,6 +427,25 @@ function printProbeReport(report: RouteProbeReport, options: Pick<CliOptions, "j
       console.log(`      ${action.detail}`);
     }
   }
+}
+
+function printRunbook(plan: RunbookPlan): void {
+  console.log("Operator Runbook");
+  console.log(`  ${plan.summary}`);
+  if (plan.nextBestAction) console.log(`  Next: ${plan.nextBestAction}`);
+  for (const [index, step] of plan.steps.slice(0, 8).entries()) {
+    console.log(`  ${index + 1}. [${step.priority}] ${step.title}`);
+    console.log(`      ${step.detail}`);
+    console.log(`      owner: ${step.owner}, status: ${step.status}`);
+    if (step.command) console.log(`      command: ${step.command}`);
+    if (step.params) console.log(`      params: ${formatRunbookParams(step.params)}`);
+  }
+}
+
+function formatRunbookParams(params: Record<string, string>): string {
+  return Object.entries(params)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" ");
 }
 
 function printCheck(check: CheckResult): void {

@@ -36,6 +36,10 @@ pnpm cli -- check --fixture ../../fixtures/mpp-needed.json --markdown
 
 Probe Lab runs safe `send_payment` dry-runs across fee-rate and MPP part settings, then recommends the lowest-cost setting that produces a candidate route.
 
+## Operator Runbook
+
+Preflight and Probe Lab reports include an operator runbook with prioritized next steps, copyable retry params, and ownership hints for wallet, node, merchant, or network follow-up.
+
 ## API
 
 Run the local API server:

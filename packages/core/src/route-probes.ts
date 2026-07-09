@@ -1,5 +1,6 @@
 import { classifyFailure } from "./failure-classifier.js";
 import { compactHash, formatAmount, outpointToString, quantityToBigInt, toHexQuantity } from "./format.js";
+import { buildRouteProbeRunbook } from "./runbook.js";
 import type {
   CkbInvoice,
   Evidence,
@@ -29,7 +30,7 @@ export async function probeRouteOptions(
   const raw: Record<string, unknown> = {};
 
   if (!input.invoice) {
-    return {
+    const report: RouteProbeReport = {
       kind: "route-probe",
       verdict: "blocked",
       score: 0,
@@ -43,6 +44,10 @@ export async function probeRouteOptions(
           priority: "high"
         }
       ]
+    };
+    return {
+      ...report,
+      runbook: buildRouteProbeRunbook(report)
     };
   }
 
@@ -142,7 +147,7 @@ export async function probeRouteOptions(
     });
   }
 
-  return {
+  const report: RouteProbeReport = {
     kind: "route-probe",
     verdict: deriveVerdict(attempts, best),
     score: deriveScore(attempts, best),
@@ -152,6 +157,10 @@ export async function probeRouteOptions(
     evidence,
     actions: dedupeActions(actions),
     raw
+  };
+  return {
+    ...report,
+    runbook: buildRouteProbeRunbook(report)
   };
 }
 

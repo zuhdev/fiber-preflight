@@ -486,6 +486,7 @@ textarea {
 
 .action-list,
 .probe-list,
+.runbook-list,
 .checks {
   display: grid;
   gap: 10px;
@@ -539,6 +540,105 @@ textarea {
   color: #32423c;
   font-style: normal;
   font-weight: 750;
+}
+
+.runbook-summary {
+  min-height: 70px;
+  display: grid;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid #d9e0dc;
+  border-radius: 8px;
+  background: #f8faf8;
+  margin-bottom: 10px;
+}
+
+.runbook-summary span {
+  color: #52625c;
+  line-height: 1.45;
+}
+
+.runbook-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 40px;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #d9e0dc;
+  border-left-width: 5px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.runbook-card.critical {
+  border-left-color: #a23b31;
+}
+
+.runbook-card.high {
+  border-left-color: #0c6b57;
+}
+
+.runbook-card.medium {
+  border-left-color: #c79822;
+}
+
+.runbook-card.low {
+  border-left-color: #729b91;
+}
+
+.runbook-index {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #0b684d;
+  background: #dff1e8;
+  font-weight: 850;
+}
+
+.runbook-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.runbook-title span {
+  color: #61706a;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.runbook-card p {
+  margin-top: 5px;
+  color: #52625c;
+  line-height: 1.45;
+}
+
+.runbook-card code {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  color: #1d2522;
+  background: #eef3f0;
+  overflow-wrap: anywhere;
+}
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #cdd8d2;
+  border-radius: 8px;
+  color: #32423c;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
 }
 
 .check-card {
@@ -642,5 +742,19 @@ textarea {
   .hop em {
     grid-column: 2;
     text-align: left;
+  }
+
+  .runbook-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .runbook-card .icon-button {
+    grid-column: 2;
+    width: 100%;
+  }
+
+  .runbook-title {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

@@ -32,6 +32,27 @@ export interface SuggestedAction {
   priority: "high" | "medium" | "low";
 }
 
+export type RunbookPriority = "critical" | "high" | "medium" | "low";
+export type RunbookStepStatus = "ready" | "blocked" | "manual";
+
+export interface RunbookStep {
+  id: string;
+  priority: RunbookPriority;
+  status: RunbookStepStatus;
+  title: string;
+  detail: string;
+  owner: "operator" | "wallet" | "merchant" | "network";
+  command?: string;
+  params?: Record<string, string>;
+  source?: string;
+}
+
+export interface RunbookPlan {
+  summary: string;
+  nextBestAction?: string;
+  steps: RunbookStep[];
+}
+
 export interface Evidence {
   label: string;
   value: string;
@@ -90,6 +111,7 @@ export interface RouteProbeReport {
   best?: RouteProbeAttempt;
   evidence: Evidence[];
   actions: SuggestedAction[];
+  runbook?: RunbookPlan;
   raw?: Record<string, unknown>;
 }
 
@@ -103,6 +125,7 @@ export interface PreflightReport {
   evidence: Evidence[];
   probes?: ProbeResult[];
   route?: RouteSummary;
+  runbook?: RunbookPlan;
   raw?: Record<string, unknown>;
 }
 

@@ -10,6 +10,7 @@ import {
   stableStringify,
   toHexQuantity
 } from "./format.js";
+import { buildPreflightRunbook } from "./runbook.js";
 import type {
   Channel,
   CheckResult,
@@ -881,7 +882,7 @@ function finalizeReport(
 ): PreflightReport {
   const verdict = deriveVerdict(checks);
   const score = deriveScore(checks);
-  return {
+  const report: PreflightReport = {
     kind,
     verdict,
     score,
@@ -892,6 +893,10 @@ function finalizeReport(
     probes: probes && probes.length > 0 ? probes : undefined,
     route,
     raw
+  };
+  return {
+    ...report,
+    runbook: buildPreflightRunbook(report)
   };
 }
 

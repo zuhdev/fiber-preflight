@@ -6,5 +6,6 @@ export * from "./format.js";
 export * from "./report.js";
 export * from "./rpc.js";
 export * from "./route-probes.js";
+export * from "./runbook.js";
 export * from "./status.js";
 export * from "./types.js";
