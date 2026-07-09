@@ -8,11 +8,13 @@ import {
   Copy,
   Download,
   FileJson,
+  History,
   Play,
   RefreshCw,
   Route,
   ShieldAlert,
   SlidersHorizontal,
+  Trash2,
   Wrench
 } from "lucide-react";
 import {
@@ -39,6 +41,15 @@ import {
 } from "@fiber-preflight/core";
 import { useMemo, useState } from "react";
 import { demoScenarios, storyForScenario, type DemoStory } from "./demoScenarios.js";
+import {
+  clearReportHistory,
+  createReportHistoryItem,
+  loadReportHistory,
+  saveReportHistory,
+  upsertReportHistory,
+  type ReportHistoryItem,
+  type ReportHistoryReport
+} from "./history.js";
 
 type Mode = "check" | "explain" | "probe";
 type Source = "demo" | "live";
@@ -70,6 +81,7 @@ export function App() {
   const [report, setReport] = useState<PreflightReport | undefined>();
   const [probeReport, setProbeReport] = useState<RouteProbeReport | undefined>();
   const [statusReport, setStatusReport] = useState<NodeStatusReport | undefined>();
+  const [history, setHistory] = useState<ReportHistoryItem[]>(() => loadReportHistory());
   const [busy, setBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -97,8 +109,7 @@ export function App() {
             feeRates: splitCsv(feeRates),
             partOptions: splitCsv(partOptions)
           });
-          setProbeReport(nextProbeReport);
-          setReport(undefined);
+          showProbeReport(nextProbeReport, selectedMode);
           return;
         }
 
@@ -118,8 +129,7 @@ export function App() {
               timeoutMs: timeoutMs.trim() || undefined,
               paymentHash: paymentHash.trim()
             });
-        setReport(nextReport);
-        setProbeReport(undefined);
+        showPreflightReport(nextReport, selectedMode);
         return;
       }
 
@@ -141,8 +151,7 @@ export function App() {
             feeRates: splitCsv(feeRates),
             partOptions: splitCsv(partOptions)
           });
-          setProbeReport(nextProbeReport);
-          setReport(undefined);
+          showProbeReport(nextProbeReport, selectedMode);
           return;
         }
 
@@ -152,14 +161,12 @@ export function App() {
           maxFeeRate: maxFeeRate.trim() || undefined,
           maxParts: maxParts.trim() || undefined
         });
-        setReport(nextReport);
-        setProbeReport(undefined);
+        showPreflightReport(nextReport, selectedMode);
       } else {
         const hash =
           source === "demo" ? stringFromScenario(scenario.input?.paymentHash) : paymentHash.trim();
         if (!hash) throw new Error("Payment hash is required.");
-        setReport(await explainPayment(rpc, { paymentHash: hash }));
-        setProbeReport(undefined);
+        showPreflightReport(await explainPayment(rpc, { paymentHash: hash }), selectedMode);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -173,6 +180,50 @@ export function App() {
     setSource("demo");
     setMode(story.mode);
     await run(story.mode);
+  }
+
+  function showPreflightReport(nextReport: PreflightReport, selectedMode: Mode): void {
+    setReport(nextReport);
+    setProbeReport(undefined);
+    rememberReport(nextReport, selectedMode);
+  }
+
+  function showProbeReport(nextReport: RouteProbeReport, selectedMode: Mode): void {
+    setProbeReport(nextReport);
+    setReport(undefined);
+    rememberReport(nextReport, selectedMode);
+  }
+
+  function rememberReport(nextReport: ReportHistoryReport, selectedMode: Mode): void {
+    const item = createReportHistoryItem(nextReport, {
+      mode: selectedMode,
+      source,
+      scenarioName,
+      rpcUrl
+    });
+    setHistory((current) => {
+      const next = upsertReportHistory(current, item);
+      saveReportHistory(next);
+      return next;
+    });
+  }
+
+  function loadHistoryItem(item: ReportHistoryItem): void {
+    setError(undefined);
+    setMode(item.mode);
+    setSource(item.source);
+    if (item.report.kind === "route-probe") {
+      setProbeReport(item.report);
+      setReport(undefined);
+    } else {
+      setReport(item.report);
+      setProbeReport(undefined);
+    }
+  }
+
+  function clearHistory(): void {
+    clearReportHistory();
+    setHistory([]);
   }
 
   async function testConnection() {
@@ -366,6 +417,10 @@ export function App() {
             {busy ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
             {mode === "probe" ? "Run probes" : "Run preflight"}
           </button>
+
+          {history.length > 0 && (
+            <ReportHistoryPanel items={history} onLoad={loadHistoryItem} onClear={clearHistory} />
+          )}
         </div>
 
         <div className="report">
@@ -377,6 +432,41 @@ export function App() {
         </div>
       </section>
     </main>
+  );
+}
+
+function ReportHistoryPanel({
+  items,
+  onLoad,
+  onClear
+}: {
+  items: ReportHistoryItem[];
+  onLoad: (item: ReportHistoryItem) => void;
+  onClear: () => void;
+}) {
+  return (
+    <section className="history-panel">
+      <div className="history-head">
+        <History size={18} />
+        <h3>History</h3>
+        <button className="icon-button" onClick={onClear} title="Clear history">
+          <Trash2 size={16} />
+        </button>
+      </div>
+      <div className="history-list">
+        {items.map((item) => (
+          <button className={`history-item ${item.verdict}`} key={item.id} onClick={() => onLoad(item)}>
+            <div>
+              <strong>{item.label}</strong>
+              <span>{formatHistoryTime(item.createdAt)}</span>
+            </div>
+            <em>{item.verdict}</em>
+            <p>{item.summary}</p>
+            <small>{item.score}/100</small>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -835,6 +925,12 @@ function StatusPanel({ report }: { report: NodeStatusReport }) {
       </ul>
     </section>
   );
+}
+
+function formatHistoryTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function stringFromScenario(value: unknown): string | undefined {

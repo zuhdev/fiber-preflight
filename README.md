@@ -26,6 +26,7 @@ Fiber payments can fail for reasons that look similar from the outside: an expir
 - Shows split MPP routes as route graph paths.
 - Explains failed payments with postmortem evidence.
 - Exports JSON and Markdown reports.
+- Keeps recent dashboard reports in local browser history for fast comparison.
 - Generates operator runbooks with owner, priority, and retry params.
 - Provides offline fixtures for deterministic demos and CI.
 
