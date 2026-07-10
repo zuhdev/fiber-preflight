@@ -187,6 +187,7 @@ export interface PaymentExplainInput {
 
 export interface ChannelInventoryItem {
   channelId: string;
+  channelOutpoint?: string;
   peer: string;
   state: string;
   enabled: boolean;

@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Copy,
   Download,
+  ExternalLink,
   FileJson,
   History,
   Play,
@@ -83,6 +84,15 @@ const statusIcon = {
   fail: ShieldAlert,
   info: Activity,
   skip: CircleSlash
+};
+
+const TESTNET_PROOF = {
+  channelId: "0xb03c6afeef30227de285309c9c4fc968eb1467f3818bec81211b15f12437dbfb",
+  channelOutpoint: "0x2c3240e3d8592c1ef959c7008a4b3f5b5253a4de9d3dd075b3ed79a24f246f3500000000",
+  fundingTx: "0x2c3240e3d8592c1ef959c7008a4b3f5b5253a4de9d3dd075b3ed79a24f246f35",
+  nodeAFaucetTx: "0x9b4e9543f18d940bc1e9e6f9a86f16bd5a1024d58f02c1400f204b0c2ed351c6",
+  nodeCFaucetTx: "0xe552573531d457a65616ea7cde64c21dbf580a8c98caf17396f17632d36e432f",
+  proofDocUrl: "https://github.com/zuhdev/fiber-preflight/blob/main/docs/testnet-proof.md"
 };
 
 export function App() {
@@ -801,6 +811,9 @@ function ImportedBundleReport({ bundle }: { bundle: SupportBundle }) {
 
 function ChannelInventoryPanel({ report }: { report: ChannelInventoryReport }) {
   const pendingChannels = report.pendingChannels ?? [];
+  const diagnosticCount = pendingChannels.filter(
+    (channel) => channel.failureDetail || channel.state === "Closed"
+  ).length;
   return (
     <section className="route-band">
       <div className="route-head">
@@ -823,16 +836,24 @@ function ChannelInventoryPanel({ report }: { report: ChannelInventoryReport }) {
         </div>
         {report.pendingChannels && (
           <div>
-            <span>Pending opens</span>
+            <span>Funding history</span>
             <strong>{pendingChannels.length}</strong>
           </div>
         )}
       </div>
       <p className="bundle-summary">{report.summary}</p>
+      {diagnosticCount > 0 && (
+        <p className="history-note">
+          {diagnosticCount} historical funding record{diagnosticCount === 1 ? "" : "s"} kept for diagnosis.
+        </p>
+      )}
       {pendingChannels.length > 0 && (
         <div className="pending-channel-list">
           {pendingChannels.map((channel) => (
-            <div className="pending-channel" key={`${channel.channelId}-${channel.peer}`}>
+            <div
+              className={`pending-channel ${channel.failureDetail || channel.state === "Closed" ? "diagnostic" : ""}`}
+              key={`${channel.channelId}-${channel.peer}`}
+            >
               <div>
                 <strong>{channel.channelId}</strong>
                 <span>{channel.peer}</span>
@@ -879,6 +900,7 @@ function LiveTestPanel({ run }: { run: LiveTestRun }) {
           );
         })}
       </div>
+      <LiveTestnetProof run={run} />
       {run.status && (
         <div className="evidence-strip">
           {run.status.evidence.slice(0, 5).map((item) => (
@@ -890,6 +912,99 @@ function LiveTestPanel({ run }: { run: LiveTestRun }) {
         </div>
       )}
       {run.channels && <ChannelInventoryPanel report={run.channels} />}
+    </section>
+  );
+}
+
+function LiveTestnetProof({ run }: { run: LiveTestRun }) {
+  const readyChannel = run.channels?.channels.find(
+    (channel) => channel.enabled && channel.state === "ChannelReady"
+  );
+  const fundingOutpoint = readyChannel?.channelOutpoint ?? TESTNET_PROOF.channelOutpoint;
+  const fundingTx = transactionHashFromOutpoint(fundingOutpoint) ?? TESTNET_PROOF.fundingTx;
+  const routePayable = run.probe?.verdict === "payable";
+  const matchesDocumentedProof =
+    fundingOutpoint === TESTNET_PROOF.channelOutpoint && fundingTx === TESTNET_PROOF.fundingTx;
+  const proofStatus = readyChannel && routePayable ? "Verified" : readyChannel ? "Channel ready" : "Pending";
+  const probeSummary = run.probe?.best
+    ? `fee rate ${run.probe.best.feeRate ?? "default"}, parts ${run.probe.best.maxParts ?? "default"}, fee ${run.probe.best.fee ?? "unknown"}`
+    : run.probe
+      ? run.probe.summary
+      : "Invoice proof not run";
+
+  const details = [
+    { label: "Funding tx", value: fundingTx },
+    { label: "Channel ID", value: readyChannel?.channelId ?? compactHash(TESTNET_PROOF.channelId) },
+    { label: "Channel outpoint", value: fundingOutpoint },
+    { label: "Node A faucet", value: TESTNET_PROOF.nodeAFaucetTx },
+    { label: "Node C faucet", value: TESTNET_PROOF.nodeCFaucetTx }
+  ];
+
+  return (
+    <section className={`testnet-proof ${routePayable ? "payable" : readyChannel ? "risky" : "unknown"}`}>
+      <div className="proof-hero">
+        <div className="proof-hero-title">
+          <CheckCircle2 size={20} />
+          <div>
+            <span>Fiber testnet</span>
+            <strong>Live Testnet Proof</strong>
+          </div>
+        </div>
+        <div className="proof-badge">
+          <span>{matchesDocumentedProof ? "documented" : "live"}</span>
+          <strong>{proofStatus}</strong>
+        </div>
+      </div>
+
+      <div className="proof-metrics">
+        <div>
+          <span>RPC</span>
+          <strong>{run.status?.verdict ?? "unknown"}</strong>
+        </div>
+        <div>
+          <span>Channel</span>
+          <strong>{readyChannel?.state ?? "not ready"}</strong>
+        </div>
+        <div>
+          <span>Dry-run</span>
+          <strong>{run.probe?.verdict ?? "not run"}</strong>
+        </div>
+        <div>
+          <span>Best route</span>
+          <strong>{probeSummary}</strong>
+        </div>
+      </div>
+
+      <div className="proof-detail-list">
+        {details.map((item) => (
+          <div className="proof-detail" key={item.label}>
+            <span>{item.label}</span>
+            <code>{item.value}</code>
+            <button
+              className="icon-button proof-copy"
+              onClick={() => copyTextToClipboard(item.value)}
+              title={`Copy ${item.label}`}
+            >
+              <Copy size={15} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="proof-actions">
+        <a className="proof-link" href={TESTNET_PROOF.proofDocUrl} target="_blank" rel="noreferrer">
+          <FileJson size={16} />
+          Proof doc
+          <ExternalLink size={14} />
+        </a>
+        <button
+          className="secondary"
+          onClick={() => copyTextToClipboard(TESTNET_PROOF.proofDocUrl)}
+        >
+          <Copy size={15} />
+          Copy proof link
+        </button>
+      </div>
     </section>
   );
 }
@@ -1409,6 +1524,12 @@ function formatBundleDate(value: string): string {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function transactionHashFromOutpoint(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const match = /^0x[0-9a-fA-F]{64}/.exec(value);
+  return match?.[0];
 }
 
 function isPaymentVerdict(value: unknown): value is PreflightReport["verdict"] {

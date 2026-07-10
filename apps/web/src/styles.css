@@ -999,6 +999,153 @@ textarea {
   box-shadow: var(--shadow-card);
 }
 
+.testnet-proof {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left-width: 5px;
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.testnet-proof.payable {
+  border-left-color: var(--primary);
+}
+
+.testnet-proof.risky {
+  border-left-color: #c89520;
+}
+
+.proof-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.proof-hero-title {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.proof-hero-title svg {
+  color: var(--primary);
+}
+
+.proof-hero-title span,
+.proof-badge span,
+.proof-metrics span,
+.proof-detail span {
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.proof-hero-title strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 1.06rem;
+}
+
+.proof-badge {
+  min-width: 132px;
+  min-height: 54px;
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 5px;
+  padding: 9px 11px;
+  border: 1px solid #b8d8c9;
+  border-radius: var(--radius);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.proof-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.proof-metrics div {
+  min-height: 72px;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgb(216 225 220 / 78%);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.proof-metrics strong {
+  overflow-wrap: anywhere;
+}
+
+.proof-detail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.proof-detail {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border: 1px solid rgb(216 225 220 / 78%);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.proof-detail code {
+  padding: 5px 7px;
+  border-radius: 6px;
+  color: #30423b;
+  background: #ffffff;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.proof-copy {
+  width: 32px;
+  height: 32px;
+}
+
+.proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proof-link {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--ink);
+  background: #ffffff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.proof-link:hover {
+  border-color: #aebfb7;
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+}
+
 .live-test-head,
 .evidence-strip {
   display: grid;
@@ -1077,6 +1224,16 @@ textarea {
   margin-top: 12px;
 }
 
+.history-note {
+  padding: 9px 10px;
+  border: 1px solid #e0c36d;
+  border-radius: var(--radius-sm);
+  color: var(--amber);
+  background: var(--amber-soft);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .pending-channel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(92px, auto);
@@ -1086,6 +1243,11 @@ textarea {
   border: 1px solid rgb(216 225 220 / 78%);
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
+}
+
+.pending-channel.diagnostic {
+  border-color: #e5cf86;
+  background: #fffaf0;
 }
 
 .pending-channel div {
@@ -1569,6 +1731,7 @@ textarea {
   .bundle-stats,
   .evidence-strip,
   .liquidity-stats,
+  .proof-metrics,
   .route-stats,
   .probe-list,
   .story-steps,
@@ -1583,6 +1746,7 @@ textarea {
 
   .route-head,
   .route-path-head,
+  .proof-hero,
   .export-row {
     align-items: flex-start;
     flex-direction: column;
@@ -1616,6 +1780,19 @@ textarea {
 
   .pending-channel {
     grid-template-columns: 1fr;
+  }
+
+  .proof-badge {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .proof-detail {
+    grid-template-columns: 1fr 34px;
+  }
+
+  .proof-detail span {
+    grid-column: 1 / -1;
   }
 
   .runbook-card {

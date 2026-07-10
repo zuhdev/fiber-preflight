@@ -66,8 +66,10 @@ export async function inspectChannels(
 function channelInventoryItem(channel: Channel): ChannelInventoryItem {
   const state = channelStateName(channel.state);
   const asset: ChannelInventoryItem["asset"] = channel.funding_udt_type_script ? "UDT" : "CKB";
+  const channelOutpoint = outpointToString(channel.channel_outpoint);
   return {
-    channelId: compactHash(channel.channel_id ?? outpointToString(channel.channel_outpoint)),
+    channelId: compactHash(channel.channel_id ?? channelOutpoint),
+    ...(channelOutpoint ? { channelOutpoint } : {}),
     peer: compactHash(channel.pubkey),
     state,
     enabled: channel.enabled !== false,
