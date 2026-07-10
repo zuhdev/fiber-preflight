@@ -47,7 +47,7 @@ import {
   type RunbookStep,
   type SupportBundle
 } from "@fiber-preflight/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { demoScenarios, storyForScenario, type DemoStory } from "./demoScenarios.js";
 import {
   clearReportHistory,
@@ -61,6 +61,7 @@ import {
 
 type Mode = "check" | "explain" | "probe";
 type Source = "demo" | "live";
+type AutoLiveStatus = "idle" | "queued" | "running" | "verified" | "failed";
 
 interface LiveTestRun {
   generatedAt: string;
@@ -97,10 +98,13 @@ const TESTNET_PROOF = {
 
 const JUDGE_SCENARIO_NAME = "MPP needed";
 const PUDGE_TX_BASE_URL = "https://pudge.explorer.nervos.org/transaction";
+const autoLiveRunKeys = new Set<string>();
 
 export function App() {
   const initialQuery = useMemo(() => new URLSearchParams(window.location.search), []);
   const initialSource = querySource(initialQuery.get("source"));
+  const autoLiveRequested = useMemo(() => queryBoolean(initialQuery.get("autoLive"), false), [initialQuery]);
+  const autoLiveRunKeyRef = useRef<string | undefined>(undefined);
   const [mode, setMode] = useState<Mode>(() => queryMode(initialQuery.get("mode")));
   const [source, setSource] = useState<Source>(initialSource);
   const [scenarioName, setScenarioName] = useState(() => queryScenario(initialQuery.get("scenario")));
@@ -128,7 +132,9 @@ export function App() {
   const [statusBusy, setStatusBusy] = useState(false);
   const [liveTestBusy, setLiveTestBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const [autoLiveProof, setAutoLiveProof] = useState(() => queryBoolean(initialQuery.get("autoLive"), false));
+  const [autoLiveStatus, setAutoLiveStatus] = useState<AutoLiveStatus>(() =>
+    autoLiveRequested ? "queued" : "idle"
+  );
 
   const scenario = useMemo(
     () => demoScenarios.find((item) => item.name === scenarioName) ?? demoScenarios[0],
@@ -421,8 +427,9 @@ export function App() {
     return nextChannels;
   }
 
-  async function runLiveTest() {
+  async function runLiveTest(options: { auto?: boolean } = {}) {
     setLiveTestBusy(true);
+    if (options.auto) setAutoLiveStatus("running");
     setError(undefined);
     setImportedBundle(undefined);
     try {
@@ -510,7 +517,7 @@ export function App() {
       }
 
       setStatusReport(nextStatus);
-      setLiveTest({
+      const nextLiveTest: LiveTestRun = {
         generatedAt: new Date().toISOString(),
         rpcUrl,
         steps,
@@ -518,9 +525,16 @@ export function App() {
         channels: nextChannels,
         preflight: nextReport,
         probe: nextProbeReport
-      });
+      };
+      setLiveTest(nextLiveTest);
+      if (isLiveProofVerified(nextLiveTest)) {
+        setAutoLiveStatus("verified");
+      } else if (options.auto) {
+        setAutoLiveStatus("failed");
+      }
     } catch (err) {
       setLiveTest(undefined);
+      if (options.auto) setAutoLiveStatus("failed");
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLiveTestBusy(false);
@@ -553,11 +567,47 @@ export function App() {
   }
 
   useEffect(() => {
-    if (!autoLiveProof) return;
-    setAutoLiveProof(false);
-    if (source !== "live" || !invoice.trim()) return;
-    void runLiveTest();
-  }, [autoLiveProof, invoice, source]);
+    if (!autoLiveRequested) return;
+
+    const trimmedInvoice = invoice.trim();
+    const trimmedRpcUrl = rpcUrl.trim();
+    const trimmedApiUrl = apiUrl.trim();
+
+    if (source !== "live") {
+      setAutoLiveStatus("idle");
+      return;
+    }
+
+    if (!trimmedInvoice || !trimmedRpcUrl || (useApiProxy && !trimmedApiUrl)) {
+      setAutoLiveStatus("queued");
+      return;
+    }
+
+    if (liveProofReady) {
+      setAutoLiveStatus("verified");
+      return;
+    }
+
+    if (liveTestBusy) return;
+
+    const autoLiveKey = [
+      trimmedRpcUrl,
+      useApiProxy ? trimmedApiUrl : "direct",
+      trimmedInvoice
+    ].join("|");
+
+    if (autoLiveRunKeyRef.current === autoLiveKey || autoLiveRunKeys.has(autoLiveKey)) return;
+    setAutoLiveStatus("queued");
+
+    const timer = window.setTimeout(() => {
+      if (autoLiveRunKeys.has(autoLiveKey)) return;
+      autoLiveRunKeys.add(autoLiveKey);
+      autoLiveRunKeyRef.current = autoLiveKey;
+      void runLiveTest({ auto: true });
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [apiUrl, autoLiveRequested, invoice, liveProofReady, liveTestBusy, rpcUrl, source, useApiProxy]);
 
   return (
     <main className="shell">
@@ -575,6 +625,7 @@ export function App() {
       <JudgeProofPanel
         demoReady={judgeDemoReady}
         liveReady={liveProofReady}
+        autoLiveStatus={autoLiveStatus}
         bundleReady={Boolean(activeExportReport)}
         demoBusy={busy}
         liveBusy={liveTestBusy}
@@ -670,7 +721,7 @@ export function App() {
                 Test connection
               </button>
               <div className="live-actions">
-                <button className="primary" onClick={runLiveTest} disabled={liveTestBusy}>
+                <button className="primary" onClick={() => void runLiveTest()} disabled={liveTestBusy}>
                   {liveTestBusy ? <RefreshCw className="spin" size={17} /> : <Play size={17} />}
                   Run live test
                 </button>
@@ -782,6 +833,7 @@ export function App() {
 function JudgeProofPanel({
   demoReady,
   liveReady,
+  autoLiveStatus,
   bundleReady,
   demoBusy,
   liveBusy,
@@ -791,6 +843,7 @@ function JudgeProofPanel({
 }: {
   demoReady: boolean;
   liveReady: boolean;
+  autoLiveStatus: AutoLiveStatus;
   bundleReady: boolean;
   demoBusy: boolean;
   liveBusy: boolean;
@@ -804,6 +857,31 @@ function JudgeProofPanel({
     { label: "Node C faucet", href: pudgeTransactionUrl(TESTNET_PROOF.nodeCFaucetTx) },
     { label: "Proof doc", href: TESTNET_PROOF.proofDocUrl }
   ];
+  const proofStateClass = liveReady
+    ? "pass"
+    : autoLiveStatus === "failed"
+      ? "fail"
+      : autoLiveStatus === "running" || autoLiveStatus === "queued" || demoReady
+        ? "warn"
+        : "idle";
+  const proofStateLabel = liveReady
+    ? "live verified"
+    : autoLiveStatus === "running"
+      ? "auto running"
+      : autoLiveStatus === "queued"
+        ? "auto queued"
+        : demoReady
+          ? "demo verified"
+          : autoLiveStatus === "failed"
+            ? "manual needed"
+            : "ready";
+  const proofStateValue = liveReady
+    ? "Testnet"
+    : autoLiveStatus === "running" || autoLiveStatus === "queued"
+      ? "Proof"
+      : demoReady
+        ? "Probe"
+        : "Standby";
 
   return (
     <section className="judge-proof-panel">
@@ -812,9 +890,9 @@ function JudgeProofPanel({
           <p className="eyebrow">Judge Proof</p>
           <h2>Proof Mode</h2>
         </div>
-        <div className={`judge-proof-state ${liveReady ? "pass" : demoReady ? "warn" : "idle"}`}>
-          <span>{liveReady ? "live verified" : demoReady ? "demo verified" : "ready"}</span>
-          <strong>{liveReady ? "Testnet" : demoReady ? "Probe" : "Standby"}</strong>
+        <div className={`judge-proof-state ${proofStateClass}`}>
+          <span>{proofStateLabel}</span>
+          <strong>{proofStateValue}</strong>
         </div>
       </div>
 
@@ -826,6 +904,10 @@ function JudgeProofPanel({
         <div>
           <span>Live proof</span>
           <strong>{liveReady ? "Verified" : "Awaiting invoice"}</strong>
+        </div>
+        <div className={`auto-proof ${autoLiveStatus}`}>
+          <span>Auto proof</span>
+          <strong>{autoLiveStatusLabel(autoLiveStatus)}</strong>
         </div>
         <div>
           <span>Evidence</span>
@@ -1722,6 +1804,14 @@ function isLiveProofVerified(run: LiveTestRun | undefined): boolean {
     (channel) => channel.enabled && channel.state === "ChannelReady"
   );
   return Boolean(readyChannel && run?.probe?.verdict === "payable");
+}
+
+function autoLiveStatusLabel(status: AutoLiveStatus): string {
+  if (status === "queued") return "Queued";
+  if (status === "running") return "Running";
+  if (status === "verified") return "Verified";
+  if (status === "failed") return "Needs manual run";
+  return "Ready";
 }
 
 function isPaymentVerdict(value: unknown): value is PreflightReport["verdict"] {

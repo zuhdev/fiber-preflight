@@ -219,6 +219,12 @@ code {
   background: var(--amber-soft);
 }
 
+.judge-proof-state.fail {
+  border-color: #e4a0a0;
+  color: var(--red);
+  background: var(--red-soft);
+}
+
 .judge-proof-state span,
 .judge-proof-grid span {
   color: var(--ink-soft);
@@ -229,7 +235,7 @@ code {
 
 .judge-proof-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -246,6 +252,22 @@ code {
 
 .judge-proof-grid strong {
   overflow-wrap: anywhere;
+}
+
+.auto-proof.running,
+.auto-proof.queued {
+  border-color: #e0c36d;
+  background: var(--amber-soft);
+}
+
+.auto-proof.verified {
+  border-color: #8fc9aa;
+  background: var(--primary-soft);
+}
+
+.auto-proof.failed {
+  border-color: #e4a0a0;
+  background: var(--red-soft);
 }
 
 .judge-proof-actions {

@@ -33,7 +33,7 @@ That command checks or starts the local Fiber nodes, mints a fresh receiver invo
 
 1. Click `Run demo` in the Judge Proof panel.
 2. Show the payable Probe Lab result, best fee/MPP setting, route graph, and support bundle export.
-3. For live proof, switch to a fresh receiver invoice in the Live RPC form and click `Run live proof`.
+3. Open the generated dashboard URL and show `Auto proof` moving to `Verified`.
 4. Show the `Live Testnet Proof` card with the documented funding transaction, ready channel, payable dry-run, and proof document link.
 
 ## One-Minute Pitch
