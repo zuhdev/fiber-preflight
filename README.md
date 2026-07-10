@@ -41,7 +41,7 @@ Fiber payments can fail for reasons that look similar from the outside: an expir
 | `apps/api` | Local HTTP API for wallets, merchant services, and web proxy mode. |
 | `apps/web` | Vite/React dashboard with demo story mode and route graph visualizer. |
 | `fixtures` | Canned scenarios for offline demos and regression tests. |
-| `tests` | Node test runner regression suite over the fixture scenarios. |
+| `tests` | Node and browser regression suite over fixture scenarios, API contracts, bundles, and dashboard smoke coverage. |
 
 ## Quick Start
 
@@ -212,7 +212,7 @@ pnpm test
 pnpm build
 ```
 
-CI runs the same check, fixture regression, and build sequence on pushes and pull requests.
+CI runs the same type-check, fixture regression, browser smoke, API, bundle, and build sequence on pushes and pull requests.
 
 ## Safety Model
 

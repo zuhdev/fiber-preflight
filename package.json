@@ -13,12 +13,13 @@
   "scripts": {
     "build": "pnpm -r build",
     "check": "pnpm --filter @fiber-preflight/core build && pnpm -r check",
-    "test": "pnpm test:fixtures && pnpm test:rpc && pnpm test:web && pnpm test:bundle && pnpm test:api",
+    "test": "pnpm test:fixtures && pnpm test:rpc && pnpm test:web && pnpm test:bundle && pnpm test:api && pnpm test:e2e",
     "test:fixtures": "tsx --test tests/fixture-regression.test.ts",
     "test:rpc": "tsx --test tests/rpc-client.test.ts",
     "test:web": "tsx --test tests/web-history.test.ts",
     "test:bundle": "tsx --test tests/support-bundle.test.ts",
     "test:api": "pnpm --filter @fiber-preflight/core build && tsx --test tests/api-contract.test.ts",
+    "test:e2e": "tsx --test tests/browser-smoke.test.ts",
     "live:proof": "pnpm --filter @fiber-preflight/cli live:proof",
     "judge:proof": "pnpm --filter @fiber-preflight/core build && tsx scripts/judge-proof.ts",
     "dev:api": "pnpm --filter @fiber-preflight/api dev",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
+    "playwright": "^1.61.1",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   },

@@ -36,7 +36,7 @@ Fiber Preflight turns Fiber RPC state into a clear pre-payment report:
 | API | `apps/api` provides local HTTP endpoints for wallets, merchant services, and the dashboard. |
 | Dashboard | `apps/web` provides demo mode, live RPC mode, route graphs, Probe Lab, runbooks, history, and support bundle import/export. |
 | Live proof | `pnpm judge:proof` runs the real Fiber testnet proof path and opens the dashboard with proof state prefilled. |
-| CI coverage | Fixture, RPC client, API contract, support bundle, dashboard history, type-check, and build tests run in GitHub Actions. |
+| CI coverage | Fixture, RPC client, API contract, support bundle, dashboard history, browser smoke, type-check, and build tests run in GitHub Actions. |
 
 ## Judge Quick Path
 
