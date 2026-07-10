@@ -11,6 +11,24 @@ Fiber Preflight is a payment readiness and route diagnostics toolkit for the Fib
 
 The project ships as a shared TypeScript core, CLI, local HTTP API, and React dashboard with offline demo fixtures for hackathon judging.
 
+![Fiber Preflight Judge Proof Mode](docs/assets/judge-proof-mode.png)
+
+## Judge Quick Path
+
+For the fastest hackathon review, start with the submission brief and then run the one-command proof:
+
+- Submission brief: [docs/submission.md](docs/submission.md)
+- Demo script: [docs/demo.md](docs/demo.md)
+- Live Pudge proof: [docs/testnet-proof.md](docs/testnet-proof.md)
+- CI: [GitHub Actions](https://github.com/zuhdev/fiber-preflight/actions/workflows/ci.yml)
+
+```powershell
+pnpm install
+pnpm judge:proof
+```
+
+`pnpm judge:proof` checks or starts the local Fiber proof services, mints a fresh receiver invoice, runs a strict payable live proof, starts the local API/web services when needed, and opens the dashboard with Judge Proof Mode prefilled.
+
 ## Why It Matters
 
 Fiber payments can fail for reasons that look similar from the outside: an expired invoice, a missing graph path, insufficient local liquidity, a fee cap that is too low, a channel that cannot carry the whole payment, or a temporary channel failure after execution. Fiber Preflight turns those raw RPC signals into a report, a route graph, and a concrete runbook.

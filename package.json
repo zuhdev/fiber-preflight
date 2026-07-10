@@ -3,6 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "description": "Payment readiness and route diagnostics for the Fiber Network.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zuhdev/fiber-preflight.git"
+  },
+  "homepage": "https://github.com/zuhdev/fiber-preflight#readme",
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",

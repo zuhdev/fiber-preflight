@@ -110,7 +110,9 @@ pnpm build
 
 Then show:
 
+- [docs/submission.md](submission.md)
 - [README.md](../README.md)
+- [docs/testnet-proof.md](testnet-proof.md)
 - [docs/api.md](api.md)
 - [docs/architecture.md](architecture.md)
 - [tests/fixture-regression.test.ts](../tests/fixture-regression.test.ts)
