@@ -32,22 +32,6 @@ Fiber payments can fail for reasons that look similar from the outside: an expir
 - Generates operator runbooks with owner, priority, and retry params.
 - Provides offline fixtures for deterministic demos and CI.
 
-## Judge Quick Path
-
-For the fastest hackathon review, start with the submission brief and then run the one-command proof:
-
-- Submission brief: [docs/submission.md](docs/submission.md)
-- Demo script: [docs/demo.md](docs/demo.md)
-- Live Pudge proof: [docs/testnet-proof.md](docs/testnet-proof.md)
-- CI: [GitHub Actions](https://github.com/zuhdev/fiber-preflight/actions/workflows/ci.yml)
-
-```powershell
-pnpm install
-pnpm judge:proof
-```
-
-`pnpm judge:proof` checks or starts the local Fiber proof services, mints a fresh receiver invoice, runs a strict payable live proof, starts the local API/web services when needed, and opens the dashboard with Judge Proof Mode prefilled.
-
 ## Packages
 
 | Path | Purpose |
@@ -235,3 +219,19 @@ CI runs the same check, fixture regression, and build sequence on pushes and pul
 Fiber Preflight uses read calls plus `send_payment` with `dry_run` for route simulation. The fixture demos do not require a live node, token, or funds. For live RPC mode, pass a Biscuit token with the minimum read and dry-run permissions needed by your node setup. Live RPC requests default to a 10 second timeout; adjust it with `--timeout-ms`, the API `timeoutMs` field, or the web dashboard live settings.
 
 Use the web `Bundle` export button or CLI `--bundle` flag when sharing diagnostics. Support bundles keep the verdict, evidence, route summary, liquidity lens, and runbook, while omitting raw RPC payloads and redacting invoices, tokens, signatures, secrets, and full hashes. The web dashboard can import a support bundle JSON file or pasted bundle JSON to review the redacted report.
+
+## Judge Quick Path
+
+For the fastest hackathon review, start with the submission brief and then run the one-command proof:
+
+- Submission brief: [docs/submission.md](docs/submission.md)
+- Demo script: [docs/demo.md](docs/demo.md)
+- Live Pudge proof: [docs/testnet-proof.md](docs/testnet-proof.md)
+- CI: [GitHub Actions](https://github.com/zuhdev/fiber-preflight/actions/workflows/ci.yml)
+
+```powershell
+pnpm install
+pnpm judge:proof
+```
+
+`pnpm judge:proof` checks or starts the local Fiber proof services, mints a fresh receiver invoice, runs a strict payable live proof, starts the local API/web services when needed, and opens the dashboard with Judge Proof Mode prefilled.
