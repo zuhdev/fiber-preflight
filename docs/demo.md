@@ -21,6 +21,13 @@ Open the web dashboard at the Vite URL, usually:
 http://127.0.0.1:5173
 ```
 
+## Judge Proof Mode
+
+1. Click `Run demo` in the Judge Proof panel.
+2. Show the payable Probe Lab result, best fee/MPP setting, route graph, and support bundle export.
+3. For live proof, switch to a fresh receiver invoice in the Live RPC form and click `Run live proof`.
+4. Show the `Live Testnet Proof` card with the documented funding transaction, ready channel, payable dry-run, and proof document link.
+
 ## One-Minute Pitch
 
 Fiber Preflight is a route doctor for Fiber payments. Before a wallet sends funds, it checks invoice expiry, local liquidity, graph visibility, fee policy, and dry-run route construction. When a payment cannot use the default settings, Probe Lab sweeps safe dry-runs and returns the best fee and MPP part settings plus an operator runbook.

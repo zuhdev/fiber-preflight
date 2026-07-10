@@ -169,6 +169,123 @@ code {
   align-items: start;
 }
 
+.judge-proof-panel {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.judge-proof-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.judge-proof-head h2 {
+  margin-top: 2px;
+  font-size: 1.25rem;
+}
+
+.judge-proof-state {
+  min-width: 148px;
+  min-height: 56px;
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 5px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--ink-muted);
+  background: var(--surface-soft);
+}
+
+.judge-proof-state.pass {
+  border-color: #8fc9aa;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.judge-proof-state.warn {
+  border-color: #e0c36d;
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+
+.judge-proof-state span,
+.judge-proof-grid span {
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.judge-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.judge-proof-grid div {
+  min-height: 70px;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgb(216 225 220 / 78%);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.judge-proof-grid strong {
+  overflow-wrap: anywhere;
+}
+
+.judge-proof-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.judge-proof-actions .proof-link {
+  width: 100%;
+}
+
+.judge-evidence-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.judge-evidence-links a {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: #30423b;
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.judge-evidence-links a:hover {
+  border-color: #aebfb7;
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+}
+
 .controls,
 .report {
   background: var(--surface);
@@ -1114,6 +1231,19 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.proof-detail a {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #30423b;
+  text-decoration: none;
+}
+
+.proof-detail a:hover code {
+  color: var(--primary);
+}
+
 .proof-copy {
   width: 32px;
   height: 32px;
@@ -1682,6 +1812,11 @@ textarea {
   .story-steps {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
+
+  .judge-proof-actions,
+  .judge-proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 620px) {
@@ -1703,6 +1838,7 @@ textarea {
   }
 
   .topbar,
+  .judge-proof-head,
   .summary-band {
     align-items: stretch;
     flex-direction: column;
@@ -1787,6 +1923,11 @@ textarea {
     justify-items: start;
   }
 
+  .judge-proof-state {
+    width: 100%;
+    justify-items: start;
+  }
+
   .proof-detail {
     grid-template-columns: 1fr 34px;
   }
@@ -1825,6 +1966,11 @@ textarea {
   .route-band,
   .liquidity-lens {
     padding: 12px;
+  }
+
+  .judge-proof-actions,
+  .judge-proof-grid {
+    grid-template-columns: 1fr;
   }
 }
 

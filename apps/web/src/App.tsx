@@ -95,6 +95,9 @@ const TESTNET_PROOF = {
   proofDocUrl: "https://github.com/zuhdev/fiber-preflight/blob/main/docs/testnet-proof.md"
 };
 
+const JUDGE_SCENARIO_NAME = "MPP needed";
+const PUDGE_TX_BASE_URL = "https://pudge.explorer.nervos.org/transaction";
+
 export function App() {
   const [mode, setMode] = useState<Mode>("check");
   const [source, setSource] = useState<Source>("demo");
@@ -132,6 +135,9 @@ export function App() {
   const activeVerdict = probeReport?.verdict ?? report?.verdict ?? importedBundle?.verdict;
   const activeScore = probeReport?.score ?? report?.score ?? importedBundle?.score;
   const activeVerdictClass = isPaymentVerdict(activeVerdict) ? activeVerdict : "unknown";
+  const activeExportReport = probeReport ?? report;
+  const judgeDemoReady = probeReport?.best?.status === "pass" && Boolean(probeReport.best.route);
+  const liveProofReady = isLiveProofVerified(liveTest);
 
   async function run(selectedMode: Mode = mode) {
     setBusy(true);
@@ -223,6 +229,59 @@ export function App() {
     await run(story.mode);
   }
 
+  async function runJudgeDemo() {
+    const judgeScenario = demoScenarios.find((item) => item.name === JUDGE_SCENARIO_NAME) ?? demoScenarios[0];
+    if (!judgeScenario) return;
+
+    setBusy(true);
+    setError(undefined);
+    setImportedBundle(undefined);
+    setLiveTest(undefined);
+    setSource("demo");
+    setMode("probe");
+    setScenarioName(judgeScenario.name);
+
+    try {
+      const nextProbeReport = await probeRouteOptions(new FixtureRpc(judgeScenario), {
+        invoice: stringFromScenario(judgeScenario.input?.invoice),
+        amount: amount.trim() || stringFromScenario(judgeScenario.input?.amount),
+        feeRates: splitCsv(feeRates),
+        partOptions: splitCsv(partOptions)
+      });
+      setProbeReport(nextProbeReport);
+      setReport(undefined);
+      rememberReport(nextProbeReport, "probe", {
+        source: "demo",
+        scenarioName: judgeScenario.name,
+        rpcUrl
+      });
+    } catch (err) {
+      setProbeReport(undefined);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runJudgeLiveProof() {
+    setSource("live");
+    setMode("check");
+    if (!invoice.trim()) {
+      setError("Live proof needs a fresh Fiber invoice.");
+      return;
+    }
+    await runLiveTest();
+  }
+
+  function exportActiveBundle(): void {
+    if (!activeExportReport) {
+      setError("Run a demo or live proof before exporting a bundle.");
+      return;
+    }
+    setError(undefined);
+    downloadSupportBundle(activeExportReport);
+  }
+
   function showPreflightReport(nextReport: PreflightReport, selectedMode: Mode): void {
     setReport(nextReport);
     setProbeReport(undefined);
@@ -235,12 +294,16 @@ export function App() {
     rememberReport(nextReport, selectedMode);
   }
 
-  function rememberReport(nextReport: ReportHistoryReport, selectedMode: Mode): void {
+  function rememberReport(
+    nextReport: ReportHistoryReport,
+    selectedMode: Mode,
+    context?: { source?: Source; scenarioName?: string; rpcUrl?: string }
+  ): void {
     const item = createReportHistoryItem(nextReport, {
       mode: selectedMode,
-      source,
-      scenarioName,
-      rpcUrl
+      source: context?.source ?? source,
+      scenarioName: context?.scenarioName ?? scenarioName,
+      rpcUrl: context?.rpcUrl ?? rpcUrl
     });
     setHistory((current) => {
       const next = upsertReportHistory(current, item);
@@ -499,6 +562,17 @@ export function App() {
         </div>
       </section>
 
+      <JudgeProofPanel
+        demoReady={judgeDemoReady}
+        liveReady={liveProofReady}
+        bundleReady={Boolean(activeExportReport)}
+        demoBusy={busy}
+        liveBusy={liveTestBusy}
+        onRunDemo={() => void runJudgeDemo()}
+        onRunLive={() => void runJudgeLiveProof()}
+        onExportBundle={exportActiveBundle}
+      />
+
       <section className="workbench">
         <div className="controls">
           <div className="segmented mode-tabs" aria-label="Mode">
@@ -692,6 +766,96 @@ export function App() {
         </div>
       </section>
     </main>
+  );
+}
+
+function JudgeProofPanel({
+  demoReady,
+  liveReady,
+  bundleReady,
+  demoBusy,
+  liveBusy,
+  onRunDemo,
+  onRunLive,
+  onExportBundle
+}: {
+  demoReady: boolean;
+  liveReady: boolean;
+  bundleReady: boolean;
+  demoBusy: boolean;
+  liveBusy: boolean;
+  onRunDemo: () => void;
+  onRunLive: () => void;
+  onExportBundle: () => void;
+}) {
+  const proofLinks = [
+    { label: "Funding tx", href: pudgeTransactionUrl(TESTNET_PROOF.fundingTx) },
+    { label: "Node A faucet", href: pudgeTransactionUrl(TESTNET_PROOF.nodeAFaucetTx) },
+    { label: "Node C faucet", href: pudgeTransactionUrl(TESTNET_PROOF.nodeCFaucetTx) },
+    { label: "Proof doc", href: TESTNET_PROOF.proofDocUrl }
+  ];
+
+  return (
+    <section className="judge-proof-panel">
+      <div className="judge-proof-head">
+        <div>
+          <p className="eyebrow">Judge Proof</p>
+          <h2>Proof Mode</h2>
+        </div>
+        <div className={`judge-proof-state ${liveReady ? "pass" : demoReady ? "warn" : "idle"}`}>
+          <span>{liveReady ? "live verified" : demoReady ? "demo verified" : "ready"}</span>
+          <strong>{liveReady ? "Testnet" : demoReady ? "Probe" : "Standby"}</strong>
+        </div>
+      </div>
+
+      <div className="judge-proof-grid">
+        <div>
+          <span>Probe demo</span>
+          <strong>{demoReady ? "Route found" : "Ready"}</strong>
+        </div>
+        <div>
+          <span>Live proof</span>
+          <strong>{liveReady ? "Verified" : "Awaiting invoice"}</strong>
+        </div>
+        <div>
+          <span>Evidence</span>
+          <strong>{compactHash(TESTNET_PROOF.fundingTx)}</strong>
+        </div>
+        <div>
+          <span>Bundle</span>
+          <strong>{bundleReady ? "Available" : "Pending"}</strong>
+        </div>
+      </div>
+
+      <div className="judge-proof-actions">
+        <button className="primary" onClick={onRunDemo} disabled={demoBusy}>
+          {demoBusy ? <RefreshCw className="spin" size={17} /> : <SlidersHorizontal size={17} />}
+          Run demo
+        </button>
+        <button className="secondary" onClick={onRunLive} disabled={liveBusy}>
+          {liveBusy ? <RefreshCw className="spin" size={16} /> : <Activity size={16} />}
+          Run live proof
+        </button>
+        <button className="secondary" onClick={onExportBundle}>
+          <Download size={16} />
+          Export bundle
+        </button>
+        <a className="proof-link" href={TESTNET_PROOF.proofDocUrl} target="_blank" rel="noreferrer">
+          <FileJson size={16} />
+          Proof doc
+          <ExternalLink size={14} />
+        </a>
+      </div>
+
+      <div className="judge-evidence-links">
+        {proofLinks.map((item) => (
+          <a href={item.href} key={item.label} target="_blank" rel="noreferrer">
+            {item.label}
+            <ExternalLink size={13} />
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -933,11 +1097,11 @@ function LiveTestnetProof({ run }: { run: LiveTestRun }) {
       : "Invoice proof not run";
 
   const details = [
-    { label: "Funding tx", value: fundingTx },
+    { label: "Funding tx", value: fundingTx, href: pudgeTransactionUrl(fundingTx) },
     { label: "Channel ID", value: readyChannel?.channelId ?? compactHash(TESTNET_PROOF.channelId) },
     { label: "Channel outpoint", value: fundingOutpoint },
-    { label: "Node A faucet", value: TESTNET_PROOF.nodeAFaucetTx },
-    { label: "Node C faucet", value: TESTNET_PROOF.nodeCFaucetTx }
+    { label: "Node A faucet", value: TESTNET_PROOF.nodeAFaucetTx, href: pudgeTransactionUrl(TESTNET_PROOF.nodeAFaucetTx) },
+    { label: "Node C faucet", value: TESTNET_PROOF.nodeCFaucetTx, href: pudgeTransactionUrl(TESTNET_PROOF.nodeCFaucetTx) }
   ];
 
   return (
@@ -979,7 +1143,14 @@ function LiveTestnetProof({ run }: { run: LiveTestRun }) {
         {details.map((item) => (
           <div className="proof-detail" key={item.label}>
             <span>{item.label}</span>
-            <code>{item.value}</code>
+            {item.href ? (
+              <a href={item.href} target="_blank" rel="noreferrer">
+                <code>{item.value}</code>
+                <ExternalLink size={13} />
+              </a>
+            ) : (
+              <code>{item.value}</code>
+            )}
             <button
               className="icon-button proof-copy"
               onClick={() => copyTextToClipboard(item.value)}
@@ -1530,6 +1701,17 @@ function transactionHashFromOutpoint(value: string | undefined): string | undefi
   if (!value) return undefined;
   const match = /^0x[0-9a-fA-F]{64}/.exec(value);
   return match?.[0];
+}
+
+function pudgeTransactionUrl(txHash: string): string {
+  return `${PUDGE_TX_BASE_URL}/${txHash}`;
+}
+
+function isLiveProofVerified(run: LiveTestRun | undefined): boolean {
+  const readyChannel = run?.channels?.channels.some(
+    (channel) => channel.enabled && channel.state === "ChannelReady"
+  );
+  return Boolean(readyChannel && run?.probe?.verdict === "payable");
 }
 
 function isPaymentVerdict(value: unknown): value is PreflightReport["verdict"] {
