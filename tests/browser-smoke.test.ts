@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createServer } from "node:net";
+import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { chromium, type Browser, type Page } from "playwright";
+import { chromium, type Page } from "playwright";
 
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+const webRoot = join(repoRoot, "apps/web");
+const viteBin = join(webRoot, "node_modules/vite/bin/vite.js");
 
 test("dashboard judge proof demo works in a real browser", { timeout: 90_000 }, async (t) => {
   const port = await getFreePort();
@@ -59,18 +62,15 @@ function collectBrowserErrors(page: Page): () => string[] {
 async function startWebServer(port: number): Promise<{ origin: string; stop: () => Promise<void> }> {
   const origin = `http://127.0.0.1:${port}`;
   const logs: string[] = [];
-  const pnpm = pnpmInvocation([
-    "--filter",
-    "@fiber-preflight/web",
-    "dev",
+  const child = spawn(process.execPath, [
+    viteBin,
     "--host",
     "127.0.0.1",
     "--port",
     String(port),
     "--strictPort"
-  ]);
-  const child = spawn(pnpm.command, pnpm.args, {
-    cwd: repoRoot,
+  ], {
+    cwd: webRoot,
     env: {
       ...process.env,
       BROWSER: "none"
@@ -151,13 +151,6 @@ async function getFreePort(): Promise<number> {
       server.close(() => resolve(port));
     });
   });
-}
-
-function pnpmInvocation(args: string[]): { command: string; args: string[] } {
-  if (process.platform === "win32") {
-    return { command: "cmd.exe", args: ["/d", "/s", "/c", "pnpm", ...args] };
-  }
-  return { command: "pnpm", args };
 }
 
 function sleep(ms: number): Promise<void> {
