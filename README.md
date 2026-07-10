@@ -11,8 +11,6 @@ Fiber Preflight is a payment readiness and route diagnostics toolkit for the Fib
 
 The project ships as a shared TypeScript core, CLI, local HTTP API, and React dashboard with offline demo fixtures for hackathon judging.
 
-![Fiber Preflight Judge Proof Mode](docs/assets/judge-proof-mode.png)
-
 ## Judge Quick Path
 
 For the fastest hackathon review, start with the submission brief and then run the one-command proof:
