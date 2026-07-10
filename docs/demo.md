@@ -23,6 +23,14 @@ http://127.0.0.1:5173
 
 ## Judge Proof Mode
 
+Fastest setup:
+
+```powershell
+pnpm judge:proof
+```
+
+That command checks or starts the local Fiber nodes, mints a fresh receiver invoice, runs the live proof, starts API/web services when needed, and opens the dashboard with the proof URL prefilled. Use `pnpm judge:proof -- --no-open` if the in-app browser is already open.
+
 1. Click `Run demo` in the Judge Proof panel.
 2. Show the payable Probe Lab result, best fee/MPP setting, route graph, and support bundle export.
 3. For live proof, switch to a fresh receiver invoice in the Live RPC form and click `Run live proof`.

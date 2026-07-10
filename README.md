@@ -106,6 +106,14 @@ Use the live proof runner when you want repeatable evidence that Fiber Preflight
 
 See [docs/testnet-proof.md](docs/testnet-proof.md) for the current Pudge testnet evidence, including faucet funding transactions, a committed private-channel funding transaction, and a payable invoice dry-run proof.
 
+One-command judge proof, using the local Node A/Node C testnet setup:
+
+```powershell
+pnpm judge:proof
+```
+
+This checks or starts the local Fiber nodes, mints a fresh receiver invoice, runs `live:proof --probe --expect-payable`, starts the local API/web services when needed, and opens the dashboard with Live RPC proof prefilled. It writes the latest handoff to `artifacts/judge-proof/latest.json`.
+
 Read-only node proof:
 
 ```powershell

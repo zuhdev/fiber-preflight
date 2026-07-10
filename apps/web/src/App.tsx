@@ -47,7 +47,7 @@ import {
   type RunbookStep,
   type SupportBundle
 } from "@fiber-preflight/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { demoScenarios, storyForScenario, type DemoStory } from "./demoScenarios.js";
 import {
   clearReportHistory,
@@ -99,19 +99,21 @@ const JUDGE_SCENARIO_NAME = "MPP needed";
 const PUDGE_TX_BASE_URL = "https://pudge.explorer.nervos.org/transaction";
 
 export function App() {
-  const [mode, setMode] = useState<Mode>("check");
-  const [source, setSource] = useState<Source>("demo");
-  const [scenarioName, setScenarioName] = useState(demoScenarios[0]?.name ?? "");
-  const [rpcUrl, setRpcUrl] = useState("http://127.0.0.1:8227");
-  const [apiUrl, setApiUrl] = useState("http://127.0.0.1:8787");
-  const [useApiProxy, setUseApiProxy] = useState(true);
+  const initialQuery = useMemo(() => new URLSearchParams(window.location.search), []);
+  const initialSource = querySource(initialQuery.get("source"));
+  const [mode, setMode] = useState<Mode>(() => queryMode(initialQuery.get("mode")));
+  const [source, setSource] = useState<Source>(initialSource);
+  const [scenarioName, setScenarioName] = useState(() => queryScenario(initialQuery.get("scenario")));
+  const [rpcUrl, setRpcUrl] = useState(() => queryValue(initialQuery, "rpcUrl", "rpc") ?? "http://127.0.0.1:8227");
+  const [apiUrl, setApiUrl] = useState(() => queryValue(initialQuery, "apiUrl", "api") ?? "http://127.0.0.1:8787");
+  const [useApiProxy, setUseApiProxy] = useState(() => queryBoolean(initialQuery.get("apiProxy"), true));
   const [token, setToken] = useState("");
   const [timeoutMs, setTimeoutMs] = useState(String(DEFAULT_RPC_TIMEOUT_MS));
-  const [invoice, setInvoice] = useState("");
+  const [invoice, setInvoice] = useState(() => initialQuery.get("invoice") ?? "");
   const [paymentHash, setPaymentHash] = useState("");
-  const [amount, setAmount] = useState("");
-  const [maxFeeRate, setMaxFeeRate] = useState("");
-  const [maxParts, setMaxParts] = useState("");
+  const [amount, setAmount] = useState(() => initialQuery.get("amount") ?? "");
+  const [maxFeeRate, setMaxFeeRate] = useState(() => initialQuery.get("maxFeeRate") ?? "");
+  const [maxParts, setMaxParts] = useState(() => initialQuery.get("maxParts") ?? "");
   const [feeRates, setFeeRates] = useState("25,50,100,250");
   const [partOptions, setPartOptions] = useState("1,2,4,8,12");
   const [report, setReport] = useState<PreflightReport | undefined>();
@@ -126,6 +128,7 @@ export function App() {
   const [statusBusy, setStatusBusy] = useState(false);
   const [liveTestBusy, setLiveTestBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [autoLiveProof, setAutoLiveProof] = useState(() => queryBoolean(initialQuery.get("autoLive"), false));
 
   const scenario = useMemo(
     () => demoScenarios.find((item) => item.name === scenarioName) ?? demoScenarios[0],
@@ -548,6 +551,13 @@ export function App() {
       timeoutMs: timeoutMs.trim() || undefined
     });
   }
+
+  useEffect(() => {
+    if (!autoLiveProof) return;
+    setAutoLiveProof(false);
+    if (source !== "live" || !invoice.trim()) return;
+    void runLiveTest();
+  }, [autoLiveProof, invoice, source]);
 
   return (
     <main className="shell">
@@ -1716,6 +1726,35 @@ function isLiveProofVerified(run: LiveTestRun | undefined): boolean {
 
 function isPaymentVerdict(value: unknown): value is PreflightReport["verdict"] {
   return value === "payable" || value === "risky" || value === "blocked" || value === "unknown";
+}
+
+function querySource(value: string | null): Source {
+  return value === "live" ? "live" : "demo";
+}
+
+function queryMode(value: string | null): Mode {
+  if (value === "explain" || value === "probe" || value === "check") return value;
+  return "check";
+}
+
+function queryScenario(value: string | null): string {
+  if (value && demoScenarios.some((item) => item.name === value)) return value;
+  return demoScenarios[0]?.name ?? "";
+}
+
+function queryValue(params: URLSearchParams, ...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = params.get(name);
+    if (value && value.trim()) return value;
+  }
+  return undefined;
+}
+
+function queryBoolean(value: string | null, fallback: boolean): boolean {
+  if (value === null) return fallback;
+  if (/^(1|true|yes|on)$/i.test(value)) return true;
+  if (/^(0|false|no|off)$/i.test(value)) return false;
+  return fallback;
 }
 
 function importedReportKind(report: unknown): string | undefined {
